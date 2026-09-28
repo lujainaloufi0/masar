@@ -37,5 +37,8 @@ services:
     dockerContext: .
     plan: free
     envVars:
+      # The API's public address, e.g. https://masar-api-xxxx.onrender.com
+      # (free services can't receive private-network traffic, so the internal address won't work).
+      # Render asks for this value when the Blueprint is created.
       - key: API_INTERNAL_URL
-        fromService: { type: web, name: masar-api, property: hostport }
+        sync: false

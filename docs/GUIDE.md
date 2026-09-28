@@ -186,7 +186,7 @@ The API tests need a database called `masar_test` (or set `TEST_DATABASE_URL`). 
 
 **Caddy** is the front door (`deploy/Caddyfile`). It sends `/api` and `/socket.io` to the API and everything else to the web app. Put a real domain name in place of `:8080` and it fetches an HTTPS certificate on its own.
 
-**Hosting on Render:** `render.yaml` describes the database, API and web app. In Render, choose New → Blueprint and pick the repository. The JWT secret is generated for you. Free plans sleep when idle, so the API catches up on a missed nightly reset when it wakes.
+**Hosting on Render:** `render.yaml` describes the database, API and web app. In Render, choose New → Blueprint and pick the repository. The JWT secret is generated for you. When Render asks for `API_INTERNAL_URL`, you can leave it for now: once `masar-api` is live, copy its public address (`https://masar-api-xxxx.onrender.com`) into `masar-web` → Environment → `API_INTERNAL_URL` and redeploy. Free Render services can't receive private-network traffic, so the internal address doesn't work there. Free plans sleep when idle, so the API catches up on a missed nightly reset when it wakes.
 
 **Any server with Docker:** copy the repository, create `.env` from `.env.example` with a long random `JWT_SECRET`, set `WEB_ORIGIN` to your address, put your domain in the Caddyfile, and run `docker compose up -d --build`.
 
