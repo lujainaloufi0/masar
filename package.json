@@ -1,0 +1,19 @@
+{
+  "name": "masar",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Masar (مسار): a bilingual task workspace for government departments.",
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "pnpm -r --filter ./packages/** build && pnpm -r --filter ./apps/** build",
+    "dev": "pnpm --filter @masar/shared build && pnpm -r --parallel --filter ./apps/** dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @masar/web test:e2e",
+    "db:migrate": "pnpm --filter @masar/api db:migrate",
+    "db:seed": "pnpm --filter @masar/api db:seed",
+    "db:reset": "pnpm --filter @masar/api db:reset"
+  }
+}

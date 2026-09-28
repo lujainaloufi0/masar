@@ -1,0 +1,175 @@
+// Masar data model. Read docs/GUIDE.md for what each table is for.
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  hr
+  manager
+  member
+}
+
+model Organization {
+  id       String @id @default("org")
+  nameEn   String
+  nameAr   String
+  idPrefix String // employee IDs look like <prefix>-10482
+}
+
+model Department {
+  id     String  @id @default(cuid())
+  nameEn String
+  nameAr String
+  color  String
+  headId String? @unique
+  head   User?   @relation("DeptHead", fields: [headId], references: [id], onDelete: SetNull)
+  groups Group[]
+  users  User[]  @relation("DeptMembers")
+  tasks  Task[]
+}
+
+model Group {
+  id        String            @id @default(cuid())
+  deptId    String
+  dept      Department        @relation(fields: [deptId], references: [id], onDelete: Restrict)
+  nameEn    String
+  nameAr    String
+  createdAt DateTime          @default(now())
+  members   GroupMembership[]
+  tasks     Task[]
+
+  @@index([deptId])
+}
+
+model User {
+  id           String    @id @default(cuid())
+  empId        String    @unique
+  nameEn       String
+  nameAr       String
+  titleEn      String
+  titleAr      String
+  email        String    @unique
+  role         Role      @default(member)
+  deptId       String
+  dept         Department @relation("DeptMembers", fields: [deptId], references: [id], onDelete: Restrict)
+  /// null until the employee chooses a password at first sign-in
+  passwordHash String?
+  active       Boolean   @default(true)
+  joinedAt     DateTime  @default(now())
+  leftAt       DateTime?
+  /// bumped on deactivation or password change to invalidate existing sessions
+  tokenVersion Int       @default(0)
+
+  headOf        Department?       @relation("DeptHead")
+  groups        GroupMembership[]
+  createdTasks  Task[]            @relation("TaskCreator")
+  cancelledTasks Task[]           @relation("TaskCanceller")
+  assignments   TaskAssignee[]
+  stepsDone     Step[]
+  activity      Activity[]        @relation("ActivityActor")
+  activityAbout Activity[]        @relation("ActivitySubject")
+  notifications Notification[]
+
+  @@index([deptId])
+}
+
+model GroupMembership {
+  userId  String
+  groupId String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId])
+}
+
+model Task {
+  id            String    @id @default(cuid())
+  deptId        String
+  dept          Department @relation(fields: [deptId], references: [id], onDelete: Restrict)
+  groupId       String
+  group         Group     @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  createdById   String
+  createdBy     User      @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  titleEn       String
+  titleAr       String
+  descEn        String    @default("")
+  descAr        String    @default("")
+  createdAt     DateTime  @default(now())
+  dueDate       DateTime  @db.Date
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  cancelledById String?
+  cancelledBy   User?     @relation("TaskCanceller", fields: [cancelledById], references: [id], onDelete: SetNull)
+  /// set when an assignee is deactivated, cleared when someone new is assigned
+  flagged       Boolean   @default(false)
+  assignees     TaskAssignee[]
+  steps         Step[]
+
+  @@index([deptId, completedAt])
+}
+
+model TaskAssignee {
+  taskId String
+  userId String
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([taskId, userId])
+  @@index([userId])
+}
+
+model Step {
+  id       String    @id @default(cuid())
+  taskId   String
+  task     Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  position Int
+  textEn   String
+  textAr   String
+  doneAt   DateTime?
+  doneById String?
+  doneBy   User?     @relation(fields: [doneById], references: [id], onDelete: SetNull)
+
+  @@index([taskId, position])
+}
+
+/// Permanent record. Rows are never updated or deleted by the app.
+model Activity {
+  id          String   @id @default(cuid())
+  at          DateTime @default(now())
+  type        String
+  actorId     String?
+  actor       User?    @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+  /// no foreign key on purpose: the entry must outlive a deleted task
+  taskId      String?
+  taskTitleEn String?
+  taskTitleAr String?
+  subjectId   String?
+  subject     User?    @relation("ActivitySubject", fields: [subjectId], references: [id], onDelete: SetNull)
+  groupId     String?
+  deptId      String?
+
+  @@index([at])
+  @@index([deptId])
+  @@index([taskId])
+}
+
+model Notification {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  at     DateTime @default(now())
+  read   Boolean  @default(false)
+  type   String
+  taskId String?
+  params Json     @default("{}")
+
+  @@index([userId, at])
+}
