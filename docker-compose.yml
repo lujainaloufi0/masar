@@ -1,0 +1,43 @@
+# Everything in one command:  cp .env.example .env  (then set JWT_SECRET)  &&  docker compose up --build
+# Open http://localhost:8080
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: masar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-masar}
+      POSTGRES_DB: masar
+    volumes: [db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U masar']
+      interval: 5s
+      retries: 10
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://masar:${POSTGRES_PASSWORD:-masar}@db:5432/masar
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      DEMO_RESET_CRON: ${DEMO_RESET_CRON:-0 3 * * *}
+      TZ: ${TZ:-Asia/Riyadh}
+      API_PORT: 4000
+    depends_on:
+      db: { condition: service_healthy }
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    depends_on: [api]
+
+  # One public address: /api and /socket.io go to the API, everything else to the web app.
+  proxy:
+    image: caddy:2-alpine
+    ports: ['8080:8080']
+    volumes: ['./deploy/Caddyfile:/etc/caddy/Caddyfile:ro']
+    depends_on: [web, api]
+
+volumes:
+  db:

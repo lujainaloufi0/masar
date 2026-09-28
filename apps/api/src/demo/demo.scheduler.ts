@@ -20,7 +20,14 @@ export class Scheduler implements OnModuleInit {
     if (config.demoMode) {
       this.add('demo-reset', config.demoResetCron, tz, () => this.resetDemo());
       this.log.log(`Demo mode: data resets on "${config.demoResetCron}" (${tz})`);
+      // Free hosting plans sleep, so a scheduled reset can be missed. Catch up on start.
+      void this.resetIfStale();
     }
+  }
+
+  private async resetIfStale() {
+    const org = await this.prisma.organization.findUnique({ where: { id: 'org' } }).catch(() => null);
+    if (!org || Date.now() - org.seededAt.getTime() > 26 * 3600_000) await this.resetDemo().catch((e) => this.log.error('Start-up reset failed', e));
   }
 
   private add(name: string, cron: string, tz: string, fn: () => Promise<void>) {

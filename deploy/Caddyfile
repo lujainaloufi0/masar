@@ -1,0 +1,8 @@
+# Local and self-hosted setups. For a real domain, replace ":8080" with the domain name
+# and Caddy fetches an HTTPS certificate on its own.
+:8080 {
+	encode zstd gzip
+	@backend path /api/* /socket.io /socket.io/*
+	reverse_proxy @backend api:4000
+	reverse_proxy web:3000
+}

@@ -22,6 +22,8 @@ model Organization {
   nameEn   String
   nameAr   String
   idPrefix String // employee IDs look like <prefix>-10482
+  /// when the demo data was last reset
+  seededAt DateTime @default(now())
 }
 
 model Department {

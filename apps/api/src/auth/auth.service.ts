@@ -104,7 +104,7 @@ export class AuthService {
     res.cookie(config.cookieName, token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: config.isProd,
+      secure: config.cookieSecure,
       path: '/',
       maxAge: config.sessionHours * 3600_000,
     });

@@ -1,21 +1,16 @@
 import type { NextConfig } from 'next';
-
-const api = process.env.API_INTERNAL_URL || 'http://localhost:4000';
+import path from 'node:path';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Trace files from the monorepo root so the standalone build includes @masar/shared.
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   reactStrictMode: true,
   poweredByHeader: false,
   agentRules: false,
   skipTrailingSlashRedirect: true,
+  devIndicators: false,
   transpilePackages: ['@masar/shared'],
-  // The browser only ever talks to this origin; Next forwards API and socket traffic.
-  async rewrites() {
-    return [
-      { source: '/api/:path*', destination: `${api}/api/:path*` },
-      { source: '/socket.io', destination: `${api}/socket.io` },
-    ];
-  },
   async headers() {
     return [
       {

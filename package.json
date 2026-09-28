@@ -2,12 +2,14 @@
   "name": "masar",
   "private": true,
   "version": "0.1.0",
-  "description": "Masar (مسار): a bilingual task workspace for government departments.",
+  "description": "Masar (\u0645\u0633\u0627\u0631): a bilingual task workspace for government departments.",
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "build": "pnpm -r --filter ./packages/** build && pnpm -r --filter ./apps/** build",
-    "dev": "pnpm --filter @masar/shared build && pnpm -r --parallel --filter ./apps/** dev",
+    "build": "pnpm --filter @masar/shared build && pnpm --filter @masar/api --filter @masar/web build",
+    "dev": "pnpm --filter @masar/shared build && pnpm --parallel --filter @masar/api --filter @masar/web dev",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Organization" ADD COLUMN     "seededAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

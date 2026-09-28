@@ -15,6 +15,8 @@ export const config = {
   demoMode: process.env.DEMO_MODE === 'true',
   demoResetCron: process.env.DEMO_RESET_CRON || '0 3 * * *',
   isProd: process.env.NODE_ENV === 'production',
+  /** Secure cookies need HTTPS. On by default in production; set COOKIE_SECURE=false only for plain-HTTP trials. */
+  cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : process.env.NODE_ENV === 'production',
   cookieName: 'masar_session',
   sessionHours: 10,
 };
