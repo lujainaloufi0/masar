@@ -18,7 +18,8 @@ export const rooms = {
  * and (for HR and admins) the organization-wide rooms. The server only pushes
  * to rooms whose members are allowed to see the data.
  */
-@WebSocketGateway({ cors: { origin: config.webOrigin, credentials: true } })
+// No trailing slash, so the path survives proxies (like Next.js rewrites) that normalize URLs.
+@WebSocketGateway({ path: '/socket.io', addTrailingSlash: false, cors: { origin: config.webOrigin, credentials: true } })
 export class EventsGateway implements OnGatewayConnection {
   private log = new Logger('Realtime');
   @WebSocketServer() server: Server;

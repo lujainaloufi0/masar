@@ -6,6 +6,7 @@ import { Public } from '../common/auth';
 import { ZodPipe } from '../common/zod.pipe';
 import { config } from '../common/config';
 import { AuthService } from './auth.service';
+import { DEMO_ACTIVATION_CODE, DEMO_PASSWORD } from '../demo/seed';
 
 const LoginBody = z.object({ empId: z.string().trim().min(1).max(40), password: z.string().min(1).max(200) });
 const SetupBody = z.object({ setupToken: z.string().min(10), password: z.string().min(8, 'errPwShort').max(200) });
@@ -21,7 +22,8 @@ export class AuthController {
   @Public()
   @Get('config')
   cfg() {
-    return { demoMode: config.demoMode };
+    // The demo credentials are public on purpose: fictional accounts, reset every night.
+    return config.demoMode ? { demoMode: true, demoPassword: DEMO_PASSWORD, demoCode: DEMO_ACTIVATION_CODE } : { demoMode: false };
   }
 
   @Public()
