@@ -62,6 +62,8 @@ model User {
   dept         Department @relation("DeptMembers", fields: [deptId], references: [id], onDelete: Restrict)
   /// null until the employee chooses a password at first sign-in
   passwordHash String?
+  /// one-time code HR hands to a new employee for their first sign-in
+  activationCodeHash String?
   active       Boolean   @default(true)
   joinedAt     DateTime  @default(now())
   leftAt       DateTime?

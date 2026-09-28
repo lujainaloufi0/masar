@@ -18,6 +18,8 @@ export function dateOnly(now: Date, days: number): Date {
 }
 
 export const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'masar-demo';
+/** The new hire's one-time code in the demo, shown on the sign-in page. */
+export const DEMO_ACTIVATION_CODE = 'WAHA-2026';
 
 /** Removes all data, in dependency order. */
 export async function wipe(prisma: PrismaClient | Prisma.TransactionClient) {
@@ -40,6 +42,7 @@ export async function wipe(prisma: PrismaClient | Prisma.TransactionClient) {
  */
 export async function seedDemo(prisma: PrismaClient, now = new Date()) {
   const passwordHash = await hash(DEMO_PASSWORD);
+  const activationCodeHash = await hash(DEMO_ACTIVATION_CODE);
 
   await prisma.$transaction(
     async (tx) => {
@@ -65,6 +68,7 @@ export async function seedDemo(prisma: PrismaClient, now = new Date()) {
             nameEn: u.name[0], nameAr: u.name[1], titleEn: u.title[0], titleAr: u.title[1], email,
             role: u.role, deptId: dept[u.dept],
             passwordHash: u.pending ? null : passwordHash,
+            activationCodeHash: u.pending ? activationCodeHash : null,
             active: u.active !== false,
             joinedAt: dayOffset(now, -(u.joinedDaysAgo ?? 400)),
             leftAt: u.leftDaysAgo ? dayOffset(now, -u.leftDaysAgo, '14:00') : null,
