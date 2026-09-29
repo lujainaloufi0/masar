@@ -596,6 +596,7 @@ video.fthumb{object-fit:contain;background:#000}
   .ask-msg.user .bubble{background:var(--accent);color:var(--accent-ink);border-end-end-radius:4px}
   .ask-msg.assistant .bubble{background:var(--surface-3);color:var(--ink);border-end-start-radius:4px}
   .ask-msg.err .bubble{background:var(--danger-soft);color:var(--danger)}
+  .ask-msg .bubble b{font-weight:600}
   .ask-msg .thinking{display:flex;align-items:center;gap:10px;color:var(--ink-2)}
   .dots{display:inline-flex;gap:3px}
   .dots i{width:5px;height:5px;border-radius:50%;background:currentColor;animation:askdot 1s infinite ease-in-out}

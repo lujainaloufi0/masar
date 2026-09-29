@@ -126,6 +126,15 @@ Safety: every tool goes through the same permission code as the rest of the API 
 
 Search (`retrieval.ts`) scores every visible task by the question's words in titles (strongest), assignee and group names, and steps and descriptions. Arabic text is normalized first (diacritics, alef forms, taa marbuta, the article "ال"), so "الشبكة" finds "شبكة".
 
+Example for Google Gemini (its OpenAI-compatible endpoint):
+```
+AI_PROVIDER=openai
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_MODEL=gemini-3.5-flash-lite
+AI_API_KEY=<your key>
+```
+Gemini attaches a "thought signature" to each tool call and rejects the next request if it's missing; the adapter keeps any such provider data (`extra` on a tool call) and sends it back unchanged. Busy (503) or rate-limited (429) replies get one retry. Free API keys allow only a few requests a minute, and each question takes two or three, so a busy demo can briefly show "can't answer right now".
+
 Settings: `AI_API_KEY` (turns it on), `AI_PROVIDER` (`anthropic`, the default, or `openai` for any OpenAI-compatible service), `AI_MODEL` (defaults: `claude-haiku-4-5` / `gpt-4o-mini`), `AI_BASE_URL` (for other OpenAI-compatible hosts), `AI_DAILY_LIMIT`.
 
 **When it breaks:** no button means no `AI_API_KEY` on the API (check `GET /api/assistant/status`). "Can't answer right now" means the model request failed; the API log shows the provider's error (usually a wrong key, model name or no credit).

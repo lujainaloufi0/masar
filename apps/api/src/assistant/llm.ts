@@ -17,6 +17,11 @@ export interface ToolCall {
   id: string;
   name: string;
   args: Record<string, unknown>;
+  /**
+   * Provider data that must be sent back untouched with the next request, such as the
+   * "thought signature" Gemini attaches to tool calls. Opaque to everything else.
+   */
+  extra?: Record<string, unknown>;
 }
 
 export type ChatMessage =
@@ -36,25 +41,34 @@ export interface ChatModel {
 export const CHAT_MODEL = Symbol('CHAT_MODEL');
 
 const TIMEOUT_MS = 30_000;
+/** Generous, because some models spend part of it thinking before they answer. */
+const MAX_TOKENS = 4096;
+
+/** Busy or rate-limited providers usually recover within a second or two, so those get one retry. */
+const RETRYABLE = new Set([429, 500, 502, 503]);
 
 async function post(url: string, headers: Record<string, string>, body: unknown) {
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', ...headers },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-  } catch {
-    throw new ServiceUnavailableException({ code: 'aiUnavailable' });
-  }
-  if (!res.ok) {
+  for (let attempt = 0; ; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+    } catch {
+      throw new ServiceUnavailableException({ code: 'aiUnavailable' });
+    }
+    if (res.ok) return res.json() as Promise<any>;
+    if (attempt === 0 && RETRYABLE.has(res.status)) {
+      await new Promise((r) => setTimeout(r, 1500));
+      continue;
+    }
     // The provider's message stays in the server log; the user gets a plain "try again".
     console.error(`[assistant] model request failed: ${res.status} ${(await res.text()).slice(0, 500)}`);
     throw new ServiceUnavailableException({ code: 'aiUnavailable' });
   }
-  return res.json() as Promise<any>;
 }
 
 const parseArgs = (s: unknown): Record<string, unknown> => {
@@ -92,7 +106,7 @@ export class AnthropicModel implements ChatModel {
       { 'x-api-key': this.key, 'anthropic-version': '2023-06-01' },
       {
         model: this.model,
-        max_tokens: 1024,
+        max_tokens: MAX_TOKENS,
         system,
         messages: out,
         tools: tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters })),
@@ -118,7 +132,7 @@ export class OpenAICompatibleModel implements ChatModel {
           role: 'assistant',
           content: m.content || null,
           ...(m.toolCalls?.length
-            ? { tool_calls: m.toolCalls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: JSON.stringify(c.args) } })) }
+            ? { tool_calls: m.toolCalls.map((c) => ({ ...c.extra, id: c.id, type: 'function', function: { name: c.name, arguments: JSON.stringify(c.args) } })) }
             : {}),
         });
       } else out.push({ role: 'user', content: m.content });
@@ -128,7 +142,7 @@ export class OpenAICompatibleModel implements ChatModel {
       { authorization: `Bearer ${this.key}` },
       {
         model: this.model,
-        max_tokens: 1024,
+        max_tokens: MAX_TOKENS,
         messages: out,
         tools: tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
       },
@@ -136,7 +150,10 @@ export class OpenAICompatibleModel implements ChatModel {
     const msg = r.choices?.[0]?.message ?? {};
     return {
       text: String(msg.content ?? '').trim(),
-      toolCalls: (msg.tool_calls ?? []).map((c: any) => ({ id: c.id, name: c.function?.name, args: parseArgs(c.function?.arguments) })),
+      toolCalls: (msg.tool_calls ?? []).map((c: any) => {
+        const { id, type: _type, function: fn, ...extra } = c;
+        return { id, name: fn?.name, args: parseArgs(fn?.arguments), ...(Object.keys(extra).length ? { extra } : {}) };
+      }),
     };
   }
 }

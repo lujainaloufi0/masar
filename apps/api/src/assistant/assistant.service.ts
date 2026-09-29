@@ -163,7 +163,9 @@ export class AssistantService {
       '- Use search_tasks before answering anything about tasks, and get_task when you need step-level detail.',
       '- Only state facts that appear in tool results. Never invent tasks, people, dates or numbers. If nothing relevant comes back, say so plainly.',
       '- Progress means finished steps out of all steps. "Overdue" means open and past the due date.',
+      '- "At risk" means open tasks that are overdue, or due within the next 7 days with steps still left. Mention how much is left and when each is due.',
       '- Keep answers short: one or two sentences, or a short list. Write task titles exactly as the tools give them, in the reply language.',
+      '- Plain text only. For lists, start lines with "- ". **Bold** is allowed for task titles; no other formatting.',
       '- You cannot change anything in Masar. You never tick steps, edit, assign or delete.',
       creates
         ? '- To create a task, call list_people_and_groups, then draft_task. The user reviews the draft in the task form and saves it themselves. Resolve relative dates ("next Thursday") from today. If key details are missing, choose sensible ones and say what you chose.'

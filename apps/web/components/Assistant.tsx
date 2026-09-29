@@ -140,7 +140,7 @@ export function Assistant() {
               )}
               {msgs.map((m, i) => (
                 <div key={i} className={`ask-msg ${m.role} ${m.error ? 'err' : ''}`}>
-                  <div className="bubble">{m.text}</div>
+                  <div className="bubble">{m.role === 'assistant' ? <Rich text={m.text} /> : m.text}</div>
                   {!!m.taskIds?.length && (
                     <div className="ask-links">
                       {m.taskIds.map((id) => {
@@ -195,6 +195,15 @@ export function Assistant() {
           </motion.section>
         )}
       </AnimatePresence>
+    </>
+  );
+}
+
+/** Shows **bold** from the model as bold text. Everything else stays plain (React escapes it). */
+function Rich({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <b key={i}>{part}</b> : part))}
     </>
   );
 }

@@ -3,10 +3,10 @@ import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AppModule } from '../src/app.module';
 import { seedDemo } from '../src/demo/seed';
-import { CHAT_MODEL, type ChatModel, type ChatMessage, type ModelReply, type ToolSpec } from '../src/assistant/llm';
+import { CHAT_MODEL, OpenAICompatibleModel, type ChatModel, type ChatMessage, type ModelReply, type ToolSpec } from '../src/assistant/llm';
 import { normalize, rank, tokens } from '../src/assistant/retrieval';
 
 /**
@@ -194,5 +194,51 @@ describe('guardrails', () => {
   it('needs a session', async () => {
     const r = await request(app.getHttpServer()).post('/api/assistant/ask').send({ question: 'hi' });
     expect(r.status).toBe(401);
+  });
+});
+
+describe('OpenAI-compatible adapter', () => {
+  it('sends provider data on tool calls back untouched (Gemini thought signatures)', async () => {
+    const bodies: any[] = [];
+    const replies = [
+      { choices: [{ message: { role: 'assistant', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'search_tasks', arguments: '{"query":"x"}' }, extra_content: { google: { thought_signature: 'SIG' } } }] } }] },
+      { choices: [{ message: { role: 'assistant', content: 'done' } }] },
+    ];
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify(replies.shift()), { status: 200 });
+    });
+    try {
+      const m = new OpenAICompatibleModel('k', 'model', 'http://example.test');
+      const first = await m.chat({ system: 's', messages: [{ role: 'user', content: 'q' }], tools: [] });
+      expect(first.toolCalls[0]).toMatchObject({ id: 'c1', name: 'search_tasks', args: { query: 'x' } });
+      await m.chat({
+        system: 's',
+        messages: [
+          { role: 'user', content: 'q' },
+          { role: 'assistant', content: '', toolCalls: first.toolCalls },
+          { role: 'tool', toolCallId: 'c1', name: 'search_tasks', content: '{}' },
+        ],
+        tools: [],
+      });
+      expect(bodies[1].messages[2].tool_calls[0].extra_content).toEqual({ google: { thought_signature: 'SIG' } });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('retries once when the provider is busy', async () => {
+    let calls = 0;
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      calls++;
+      return calls === 1 ? new Response('busy', { status: 503 }) : new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 });
+    });
+    try {
+      const r = await new OpenAICompatibleModel('k', 'm', 'http://example.test').chat({ system: 's', messages: [{ role: 'user', content: 'q' }], tools: [] });
+      expect(r.text).toBe('ok');
+      expect(calls).toBe(2);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
