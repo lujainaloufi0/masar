@@ -32,14 +32,29 @@ export interface DemoAccount {
 }
 
 export function useDemo() {
-  const cfg = useQuery({ queryKey: ['auth-config'], queryFn: () => api<{ demoMode: boolean; demoPassword?: string; demoCode?: string }>('/auth/config'), staleTime: Infinity });
+  // On free hosting the API may be asleep and take up to a minute to wake, so keep retrying.
+  const wake = { retry: 15, retryDelay: 4000 } as const;
+  const cfg = useQuery({
+    queryKey: ['auth-config'],
+    queryFn: () => api<{ demoMode: boolean; demoPassword?: string; demoCode?: string }>('/auth/config'),
+    staleTime: Infinity,
+    ...wake,
+  });
   const accounts = useQuery({
     queryKey: ['demo-accounts'],
     queryFn: () => api<DemoAccount[]>('/auth/demo-accounts'),
     enabled: !!cfg.data?.demoMode,
     staleTime: 5 * 60_000,
+    ...wake,
   });
-  return { demoMode: !!cfg.data?.demoMode, demoPassword: cfg.data?.demoPassword, demoCode: cfg.data?.demoCode, accounts: accounts.data ?? [] };
+  return {
+    demoMode: !!cfg.data?.demoMode,
+    demoPassword: cfg.data?.demoPassword,
+    demoCode: cfg.data?.demoCode,
+    accounts: accounts.data ?? [],
+    /** True while the server is still starting up. */
+    waking: !cfg.data || (!!cfg.data.demoMode && !accounts.data),
+  };
 }
 
 export function Brand() {

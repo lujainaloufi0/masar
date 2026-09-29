@@ -100,6 +100,7 @@ const en = {
   errGeneric: 'Something went wrong. Try again.', errNetwork: "Can't reach Masar right now. Check your connection and try again.",
   errForbidden: "You don't have permission to do that.", errNotFound: 'This item no longer exists or is not visible to you.',
   loading: 'Loading…', skip: 'Skip to content',
+  waking: 'Starting up the server… this can take up to a minute after a quiet spell.',
 };
 
 export type Key = keyof typeof en;
@@ -203,6 +204,7 @@ const ar: Partial<Record<Key, string>> = {
   errGeneric: 'حدث خطأ. حاول مرة أخرى.', errNetwork: 'تعذّر الوصول إلى مسار الآن. تحقّق من الاتصال وحاول مرة أخرى.',
   errForbidden: 'ليست لديك صلاحية لهذا الإجراء.', errNotFound: 'هذا العنصر لم يعد موجودًا أو غير متاح لك.',
   loading: 'جارٍ التحميل…', skip: 'تخطَّ إلى المحتوى',
+  waking: 'جارٍ تشغيل الخادم… قد يستغرق ذلك دقيقة بعد فترة من عدم الاستخدام.',
 };
 
 export const DICT: Record<Lang, Partial<Record<Key, string>>> = { en, ar };

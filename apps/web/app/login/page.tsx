@@ -43,7 +43,7 @@ export default function LoginPage() {
   const { t, tx } = usePrefs();
   const router = useRouter();
   const qc = useQueryClient();
-  const { demoMode, accounts, demoPassword, demoCode } = useDemo();
+  const { demoMode, accounts, demoPassword, demoCode, waking } = useDemo();
   const [empId, setEmpId] = useState('');
   const [pw, setPw] = useState('');
   const [err, setErr] = useState<{ id?: string; pw?: string; form?: string }>({});
@@ -130,6 +130,9 @@ export default function LoginPage() {
               </button>
             </form>
             <p className="faint" style={{ fontSize: 13 }}>{t('firstTime')}</p>
+            {waking && (
+              <p className="code-note" role="status">{t('waking')}</p>
+            )}
             {demoMode && accounts.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div className="demo-head">
