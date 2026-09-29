@@ -66,7 +66,7 @@ export function DrawerLayer() {
             exit={{ x: dx, opacity: 0, transition: { duration: 0.24, ease: [0.4, 0, 1, 1] } }}
           >
             {drawer.type === 'task' && <TaskDrawer key={drawer.id} id={drawer.id} />}
-            {drawer.type === 'taskForm' && <TaskForm key={drawer.editId ?? 'new'} editId={drawer.editId} />}
+            {drawer.type === 'taskForm' && <TaskForm key={drawer.editId ?? (drawer.draft ? 'draft:' + drawer.draft.title : 'new')} editId={drawer.editId} draft={drawer.draft} />}
             {drawer.type === 'emp' && <EmpDrawer key={drawer.id ?? 'new'} id={drawer.id} />}
           </motion.aside>
         </>

@@ -156,3 +156,30 @@ export interface BootstrapDTO {
   groups: GroupDTO[];
   people: PersonDTO[];
 }
+
+/* ---------- Ask Masar (the assistant) ---------- */
+
+/** A task the assistant proposes. Nothing is saved until a person reviews it in the task form and presses Create. */
+export interface TaskDraft {
+  title: string;
+  desc: string;
+  groupId: string;
+  /** YYYY-MM-DD */
+  startDate: string;
+  /** YYYY-MM-DD */
+  dueDate: string;
+  assigneeIds: string[];
+  steps: string[];
+}
+
+export interface AssistantTurn {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
+export interface AssistantReply {
+  answer: string;
+  /** Tasks the answer is about, so the interface can link to them. */
+  taskIds: string[];
+  draft: TaskDraft | null;
+}

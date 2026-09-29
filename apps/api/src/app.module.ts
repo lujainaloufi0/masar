@@ -19,6 +19,9 @@ import { NotificationsService } from './notifications/notifications.service';
 import { Events, EventsGateway } from './realtime/events';
 import { Scheduler } from './demo/demo.scheduler';
 import { AttachmentsController, AttachmentsService } from './attachments/attachments';
+import { AssistantController } from './assistant/assistant.controller';
+import { AssistantService } from './assistant/assistant.service';
+import { CHAT_MODEL, modelFromEnv } from './assistant/llm';
 
 @Controller('health')
 class HealthController {
@@ -39,7 +42,7 @@ class HealthController {
     // General limit for every route; login and password routes set a stricter one.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
   ],
-  controllers: [HealthController, AuthController, TasksController, PeopleController, OrgController, AttachmentsController],
+  controllers: [HealthController, AuthController, TasksController, PeopleController, OrgController, AttachmentsController, AssistantController],
   providers: [
     SessionVerifier,
     AuthService,
@@ -52,6 +55,9 @@ class HealthController {
     Events,
     Scheduler,
     AttachmentsService,
+    AssistantService,
+    // Switched off (null) when no AI_API_KEY is set.
+    { provide: CHAT_MODEL, useFactory: () => modelFromEnv() },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
   ],

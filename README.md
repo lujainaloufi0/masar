@@ -19,6 +19,7 @@ A bilingual task workspace for government departments. Managers split work into 
 - **History is permanent.** Deactivated employees keep their name on past work, and their open tasks are flagged to their manager. Deleting a task still leaves an entry in the activity log.
 - **Scheduled tasks.** A head can set a start date. Until then, only the head and admins see the task. Its assignees get it, with a notification, on the start day.
 - **Files on tasks and steps.** Attach images, videos and documents (up to 20 MB each) while creating a task, to the task as a whole or to a single step, and add more later from the same view. Anything that isn't a safe image, video or PDF downloads instead of opening in the page.
+- **Ask Masar, an AI assistant.** Ask about your tasks in Arabic or English ("Which tasks are at risk this week?") and get answers from live data, with links to the tasks. A department head can ask it to draft a task; the task form opens pre-filled, and nothing is saved until they press Create. The assistant can only read what the person asking can see.
 - **Live.** When someone ticks a step, every open browser in that department updates within a moment.
 - **English and Arabic** with full right-to-left layout, in **light and dark** themes.
 - **Quiet by default, rewarding at completion.** Bars and rings fill slowly with a counting percentage. At 100% the ring shakes, turns gold and draws a checkmark, confetti bursts, and a toast shows the days taken.
@@ -46,6 +47,7 @@ These credentials are public on purpose. They exist only when `DEMO_MODE=true`, 
 | API | NestJS 11, Zod validation, JWT in an httpOnly cookie, argon2 password hashes, rate-limited sign-in |
 | Database | PostgreSQL 16 with Prisma |
 | Live updates | Socket.IO, with rooms per department, person and role |
+| AI assistant | Tool calling with Anthropic or any OpenAI-compatible model; bilingual keyword retrieval; draft-only actions |
 | Tests | Vitest (unit and API integration), Playwright (end-to-end) |
 | Delivery | Docker, Docker Compose with Caddy, GitHub Actions |
 
@@ -77,7 +79,7 @@ pnpm test                                    # shared rules, interface text, API
 pnpm test:e2e                                # Playwright, against a running app with fresh demo data
 ```
 
-The API tests cover the rules that matter most: who can tick, edit and delete a task; which fields other departments can see; completion being recorded exactly once when two people finish together; deactivation signing a person out and flagging their work; and the sign-in rate limit.
+The API tests cover the rules that matter most, and include a retrieval check for the assistant (ten questions in both languages, each expecting the right task in the top three): who can tick, edit and delete a task; which fields other departments can see; completion being recorded exactly once when two people finish together; deactivation signing a person out and flagging their work; and the sign-in rate limit.
 
 ## Project layout
 

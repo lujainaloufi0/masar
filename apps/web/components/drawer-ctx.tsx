@@ -1,9 +1,10 @@
 'use client';
 import { createContext, useContext } from 'react';
+import type { TaskDraft } from '@masar/shared';
 
 export type DrawerState =
   | { type: 'task'; id: string }
-  | { type: 'taskForm'; editId?: string }
+  | { type: 'taskForm'; editId?: string; draft?: TaskDraft }
   | { type: 'emp'; id: string | null }
   | null;
 

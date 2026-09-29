@@ -23,6 +23,11 @@ services:
       DEMO_RESET_CRON: ${DEMO_RESET_CRON:-0 3 * * *}
       TZ: ${TZ:-Asia/Riyadh}
       API_PORT: 4000
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-60}
     depends_on:
       db: { condition: service_healthy }
 

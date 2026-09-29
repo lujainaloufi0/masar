@@ -311,3 +311,13 @@ describe('step files', () => {
     expect(bad.status).toBe(400);
   });
 });
+
+describe('assistant without an AI key', () => {
+  it('reports itself switched off and refuses questions', async () => {
+    const agent = await signIn('WDA-10482');
+    expect((await agent.get('/api/assistant/status')).body).toEqual({ enabled: false });
+    const r = await agent.post('/api/assistant/ask').send({ question: 'What is due this week?' });
+    expect(r.status).toBe(503);
+    expect(r.body.code).toBe('aiDisabled');
+  });
+});

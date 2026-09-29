@@ -114,6 +114,14 @@ const en = {
   deleteFile: 'Delete {name}', download: 'Download', openFile: 'Open {name}',
   errFileTooBig: 'That file is larger than 20 MB.', errFileTooBigNamed: '{name} is larger than 20 MB.', errTooManyFiles: 'This task already has the maximum of 50 files.',
   errFileMissing: 'Choose a file to upload.',
+  askMasar: 'Ask Masar', askSub: 'Answers from your live tasks', askPh: 'Ask about your tasks…', askSend: 'Send', askClose: 'Close Ask Masar',
+  askThinking: 'Looking through your tasks…', askNew: 'New conversation', askHello: 'Hi {name}. Ask me about your tasks, in Arabic or English.',
+  askNote: 'AI answers use only tasks you can see. Check anything important.', askTry: 'Try asking',
+  ask_m1: "What's due for me this week?", ask_m2: 'Which of my tasks are overdue?', ask_m3: 'What steps are left on my tasks?',
+  ask_h1: 'Which tasks are at risk this week?', ask_h2: 'Summarize progress in my department', ask_h3: 'Draft a task: Sara should patch the build servers by next Thursday',
+  askDraft: 'Draft task', askReview: 'Review and create', askDraftNote: 'Nothing is saved until you press Create.', askStepsN: '{n} steps', askStepsN_1: '1 step',
+  draftLoaded: 'Filled in by Ask Masar. Review everything, then create.',
+  aiDisabled: 'Ask Masar is switched off on this server.', aiUnavailable: "Ask Masar can't answer right now. Try again in a moment.", aiLimit: "You've reached today's question limit. Try again tomorrow.",
   ev_attachment_added: '{actor} added a file to \u201c{task}\u201d', ev_attachment_removed: '{actor} removed a file from \u201c{task}\u201d',
 };
 
@@ -232,6 +240,14 @@ const ar: Partial<Record<Key, string>> = {
   deleteFile: 'حذف {name}', download: 'تنزيل', openFile: 'فتح {name}',
   errFileTooBig: 'حجم الملف أكبر من 20 ميجابايت.', errFileTooBigNamed: 'حجم {name} أكبر من 20 ميجابايت.', errTooManyFiles: 'وصلت هذه المهمة إلى الحد الأقصى وهو 50 ملفًا.',
   errFileMissing: 'اختر ملفًا للرفع.',
+  askMasar: 'اسأل مسار', askSub: 'إجابات من مهامك الحالية', askPh: 'اسأل عن مهامك…', askSend: 'إرسال', askClose: 'إغلاق اسأل مسار',
+  askThinking: 'أبحث في مهامك…', askNew: 'محادثة جديدة', askHello: 'مرحبًا {name}. اسألني عن مهامك بالعربية أو الإنجليزية.',
+  askNote: 'الإجابات من الذكاء الاصطناعي وتعتمد فقط على المهام المتاحة لك. تحقّق من الأمور المهمة.', askTry: 'جرّب أن تسأل',
+  ask_m1: 'ما المهام المستحقة عليّ هذا الأسبوع؟', ask_m2: 'ما مهامي المتأخرة؟', ask_m3: 'ما الخطوات المتبقية في مهامي؟',
+  ask_h1: 'ما المهام المعرّضة للتأخير هذا الأسبوع؟', ask_h2: 'لخّص تقدّم إدارتي', ask_h3: 'أنشئ مسودة مهمة: سارة تحدّث خوادم البناء قبل الخميس القادم',
+  askDraft: 'مسودة مهمة', askReview: 'مراجعة وإنشاء', askDraftNote: 'لن يُحفظ شيء حتى تضغط إنشاء.', askStepsN: '{n} خطوات', askStepsN_1: 'خطوة واحدة',
+  draftLoaded: 'عبّأها اسأل مسار. راجع كل شيء ثم أنشئ المهمة.',
+  aiDisabled: 'اسأل مسار غير مفعّل على هذا الخادم.', aiUnavailable: 'تعذّر على اسأل مسار الإجابة الآن. حاول بعد قليل.', aiLimit: 'وصلت إلى الحد اليومي للأسئلة. حاول غدًا.',
   ev_attachment_added: 'إضافة ملف إلى «{task}» بواسطة {actor}', ev_attachment_removed: 'حذف ملف من «{task}» بواسطة {actor}',
 };
 

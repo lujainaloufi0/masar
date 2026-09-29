@@ -107,6 +107,29 @@ Files are stored in the database (the `Attachment` table), so they work on hosts
 
 **When it breaks:** "That file is larger than 20 MB" means the limit, set by `MAX_FILE_BYTES` in `apps/api/src/attachments/attachments.ts` (change the web app's `MAX_BYTES` and `proxyClientMaxBodySize` to match). If uploads fail on hosting with a free database, check the database hasn't run out of space.
 
+### Ask Masar (the AI assistant)
+A chat panel (bottom corner) that answers questions about tasks. It's off unless the API has an `AI_API_KEY`; without one the button doesn't appear.
+
+How a question is answered (`apps/api/src/assistant/`):
+1. The web app sends the question, the last few messages and the interface language to `POST /api/assistant/ask`.
+2. The API gives the model a short system prompt (who is asking, their role and department, today's date, the rules) and four **tools**.
+3. The model calls tools, the API runs them **as the person asking**, and the results go back to the model, for up to six rounds. Then it answers.
+
+| Tool | What it does |
+| --- | --- |
+| `search_tasks` | Keyword search over the tasks the person can see, with filters (open, overdue, due within N days, assigned to me) |
+| `get_task` | One task in full: steps, who finished them, dates |
+| `list_people_and_groups` | The department's groups and active people, so a draft can name them |
+| `draft_task` | Checks a proposed task against the same rules as the form and returns it. **It never saves.** The form opens pre-filled and the person presses Create |
+
+Safety: every tool goes through the same permission code as the rest of the API (`TasksService.list/get`, `canCreateTask`), so the assistant can't reveal another department's work or a scheduled task a member shouldn't see. The model is told to treat task text as data, not instructions. Limits: 500 characters a question, 10 questions a minute per address, and `AI_DAILY_LIMIT` (default 60) a day per person.
+
+Search (`retrieval.ts`) scores every visible task by the question's words in titles (strongest), assignee and group names, and steps and descriptions. Arabic text is normalized first (diacritics, alef forms, taa marbuta, the article "ال"), so "الشبكة" finds "شبكة".
+
+Settings: `AI_API_KEY` (turns it on), `AI_PROVIDER` (`anthropic`, the default, or `openai` for any OpenAI-compatible service), `AI_MODEL` (defaults: `claude-haiku-4-5` / `gpt-4o-mini`), `AI_BASE_URL` (for other OpenAI-compatible hosts), `AI_DAILY_LIMIT`.
+
+**When it breaks:** no button means no `AI_API_KEY` on the API (check `GET /api/assistant/status`). "Can't answer right now" means the model request failed; the API log shows the provider's error (usually a wrong key, model name or no credit).
+
 ---
 
 ## 5. Sign-in and security
@@ -188,7 +211,7 @@ The web app (`apps/web/lib/realtime.ts`) listens and updates its cached data. Th
 | --- | --- |
 | `pnpm --filter @masar/shared test` | Progress, days taken, and who may do what |
 | `pnpm --filter @masar/web test` | Every text has an Arabic version, plurals, Arabic day counting |
-| `pnpm --filter @masar/api test` | The real API against a test database: sign-in, activation codes, task rights, hidden departments, completion counted once, the restricted completed board, HR rules, deactivation, the rate limit |
+| `pnpm --filter @masar/api test` | The real API against a test database: sign-in, activation codes, task rights, hidden departments, completion counted once, the restricted completed board, HR rules, deactivation, the rate limit. `assistant.test.ts` replaces the model with a script and checks the assistant's tools: a ten-question retrieval check in both languages, that it never shows what the person can't see, and that drafts are validated and never saved |
 | `pnpm test:e2e` | A real browser: finishing a task and seeing the celebration, a member blocked from HR pages, restricted cells, Arabic RTL, a head creating a task that appears live for the assignee |
 
 The API tests need a database called `masar_test` (or set `TEST_DATABASE_URL`). They reset it before each test.

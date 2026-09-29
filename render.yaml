@@ -29,6 +29,11 @@ services:
         value: '4000'
       - key: PORT
         value: '4000'
+      # Optional: set an API key to switch on Ask Masar. Leave empty to keep it off.
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: anthropic
 
   - type: web
     name: masar-web

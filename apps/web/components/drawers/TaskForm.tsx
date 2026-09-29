@@ -1,7 +1,7 @@
 'use client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import type { TaskDTO } from '@masar/shared';
+import type { TaskDTO, TaskDraft } from '@masar/shared';
 import { api, ApiError, errorKey, uploadFile } from '@/lib/api';
 import { putTask, useLookup, useTask } from '@/lib/data';
 import { usePrefs } from '@/lib/prefs';
@@ -28,13 +28,14 @@ const inAWeek = () => {
 };
 
 /** Create a task, or edit one (title, details, group, due date, assignees, steps). */
-export function TaskForm({ editId }: { editId?: string }) {
+export function TaskForm({ editId, draft }: { editId?: string; draft?: TaskDraft }) {
   const { data: task } = useTask(editId ?? null);
   if (editId && !task) return null;
-  return <Form task={task} />;
+  return <Form task={task} draft={draft} />;
 }
 
-function Form({ task }: { task?: TaskDTO }) {
+/** `draft` pre-fills a new task (from Ask Masar). Nothing is saved until the person presses Create. */
+function Form({ task, draft }: { task?: TaskDTO; draft?: TaskDraft }) {
   const { t, tx, lang } = usePrefs();
   const L = useLookup();
   const me = L.me!;
@@ -46,14 +47,18 @@ function Form({ task }: { task?: TaskDTO }) {
   const seq = useRef(0);
   const row = (s: Partial<StepRow> = {}): StepRow => ({ key: ++seq.current, id: null, text: '', done: false, files: [], ...s });
 
-  const [title, setTitle] = useState(task ? tx(task.title) : '');
-  const [desc, setDesc] = useState(task ? tx(task.desc) : '');
-  const [groupId, setGroupId] = useState(task?.groupId ?? groups[0]?.id ?? '');
-  const [start, setStart] = useState(task?.startDate ?? todayISO());
-  const [due, setDue] = useState(task?.dueDate ?? inAWeek());
-  const [assignees, setAssignees] = useState<string[]>(task?.assigneeIds ?? []);
+  const [title, setTitle] = useState(task ? tx(task.title) : draft?.title ?? '');
+  const [desc, setDesc] = useState(task ? tx(task.desc) : draft?.desc ?? '');
+  const [groupId, setGroupId] = useState(task?.groupId ?? (draft && groups.some((g) => g.id === draft.groupId) ? draft.groupId : groups[0]?.id ?? ''));
+  const [start, setStart] = useState(task?.startDate ?? draft?.startDate ?? todayISO());
+  const [due, setDue] = useState(task?.dueDate ?? draft?.dueDate ?? inAWeek());
+  const [assignees, setAssignees] = useState<string[]>(task?.assigneeIds ?? draft?.assigneeIds ?? []);
   const [steps, setSteps] = useState<StepRow[]>(() =>
-    task ? task.steps.map((s) => row({ id: s.id, text: tx(s.text), done: s.done })) : [row(), row(), row()],
+    task
+      ? task.steps.map((s) => row({ id: s.id, text: tx(s.text), done: s.done }))
+      : draft?.steps.length
+        ? draft.steps.map((text) => row({ text }))
+        : [row(), row(), row()],
   );
   const [err, setErr] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -146,6 +151,12 @@ function Form({ task }: { task?: TaskDTO }) {
       </div>
       <form ref={form} onSubmit={submit} noValidate style={{ display: 'contents' }}>
         <div className="drawer-b">
+          {draft && !task && (
+            <div className="banner info" role="status">
+              <Icon name="sparkle" />
+              <span>{t('draftLoaded')}</span>
+            </div>
+          )}
           <div className="field">
             <label htmlFor="ntTitle">{t('f_title')}</label>
             <input className="input" id="ntTitle" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('f_titlePh')} aria-invalid={!!err.title} autoFocus maxLength={200} />

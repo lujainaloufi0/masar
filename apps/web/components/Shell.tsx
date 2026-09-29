@@ -17,6 +17,7 @@ import { ConfettiCanvas, ToastProvider, useToast } from './fx';
 import { HoldFill, forgetProgress } from './Progress';
 import { DrawerCtx, useDrawer, type DrawerState } from './drawer-ctx';
 import { DrawerLayer } from './drawers/DrawerLayer';
+import { Assistant } from './Assistant';
 
 const NAV_ICON: Record<Route, IconName> = {
   overview: 'overview', tasks: 'tasks', groups: 'groups', completed: 'completed', employees: 'employees', departments: 'departments', activity: 'activity',
@@ -227,6 +228,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
             </motion.main>
           </div>
         </div>
+        <Assistant />
         <DrawerLayer />
         <ConfettiCanvas />
       </HoldFill.Provider>
