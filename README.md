@@ -99,4 +99,4 @@ docs/GUIDE.md    Plain-language guide to every part, and how to fix it when it b
 
 ## About this project
 
-Masar is a portfolio project, built with AI assistance (Claude). The commits carry that attribution.
+A portfolio project exploring how government departments could organize, assign and track work with clear ownership, earned progress and permanent records. It's designed for Arabic and English from the start.
