@@ -9,7 +9,7 @@ import { api, ApiError } from '@/lib/api';
 import { keys, useBootstrap, useLookup, useNotifications, useTasks } from '@/lib/data';
 import { usePrefs } from '@/lib/prefs';
 import { useRealtime } from '@/lib/realtime';
-import { fmtWhen } from '@/lib/format';
+import { fmtWhen, isLive } from '@/lib/format';
 import { notificationText } from '@/lib/messages';
 import { Icon, type IconName } from './Icon';
 import { Avatar, StatusChip } from './bits';
@@ -240,7 +240,7 @@ function Sidebar({ route, connected, onNavigate }: { route: Route; connected: bo
   const { data: tasks } = useTasks();
   const { demoMode } = useDemo();
   const me = L.me!;
-  const open = (tasks ?? []).filter((x) => !x.completedAt && (me.role === 'member' ? x.assigneeIds.includes(me.id) : x.deptId === me.deptId)).length;
+  const open = (tasks ?? []).filter((x) => !x.completedAt && isLive(x) && (me.role === 'member' ? x.assigneeIds.includes(me.id) : x.deptId === me.deptId)).length;
   return (
     <>
       <Brand />

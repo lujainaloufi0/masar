@@ -8,7 +8,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
-    "types": ["node"]
+    "types": ["node", "multer"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "**/*.test.ts"]

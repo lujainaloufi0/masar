@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { progress, taskStatus, type ActivityDTO, type TaskDTO } from '@masar/shared';
 import { useLookup, useStats, useTasks } from '@/lib/data';
 import { usePrefs } from '@/lib/prefs';
-import { dayDiff, fmtDate, fmtWhen, hijri, todayISO } from '@/lib/format';
+import { dayDiff, fmtDate, fmtWhen, hijri, todayISO, isLive } from '@/lib/format';
 import { activityIcon, activityText } from '@/lib/messages';
 import { Icon } from '../Icon';
 import { Avatars, DueInfo, Empty, useDL } from '../bits';
@@ -105,9 +105,9 @@ export function DeptProgressPanel({ deptId }: { deptId: string }) {
   const L = useLookup();
   const { data: tasks } = useTasks();
   const all = (tasks ?? []).filter((x) => x.deptId === deptId);
-  const open = all.filter((x) => !x.completedAt);
+  const open = all.filter((x) => !x.completedAt && isLive(x));
   const done30 = all.filter((x) => x.completedAt && dayDiff(x.completedAt, todayISO()) <= 30);
-  const c = { todo: open.filter((x) => taskStatus(x) === 'todo').length, doing: open.filter((x) => taskStatus(x) === 'doing').length, done: done30.length };
+  const c = { todo: open.filter((x) => taskStatus(x, todayISO()) === 'todo').length, doing: open.filter((x) => taskStatus(x, todayISO()) === 'doing').length, done: done30.length };
   const groups = [...L.groups.values()].filter((g) => g.deptId === deptId);
   const segs: ['done' | 'doing' | 'todo', string, string][] = [
     ['done', 'var(--gold)', 'doneRecent'],

@@ -17,6 +17,8 @@ A bilingual task workspace for government departments. Managers split work into 
   - **Member:** ticks steps on the tasks assigned to them.
 - **Visibility across departments is controlled on the server.** On the completed-work board, other departments' tasks show only the name, the department and the days taken.
 - **History is permanent.** Deactivated employees keep their name on past work, and their open tasks are flagged to their manager. Deleting a task still leaves an entry in the activity log.
+- **Scheduled tasks.** A head can set a start date. Until then, only the head and admins see the task. Its assignees get it, with a notification, on the start day.
+- **Files on every task.** Images, videos and documents (up to 20 MB each) in a Files tab, with previews. Anything that isn't a safe image, video or PDF downloads instead of opening in the page.
 - **Live.** When someone ticks a step, every open browser in that department updates within a moment.
 - **English and Arabic** with full right-to-left layout, in **light and dark** themes.
 - **Quiet by default, rewarding at completion.** Bars and rings fill slowly with a counting percentage. At 100% the ring shakes, turns gold and draws a checkmark, confetti bursts, and a toast shows the days taken.

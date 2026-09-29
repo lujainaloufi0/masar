@@ -5,7 +5,7 @@ import { progress, taskStatus, type TaskDTO } from '@masar/shared';
 import { api, errorKey } from '@/lib/api';
 import { keys, useActivity, useCompleted, useLookup, useTasks } from '@/lib/data';
 import { usePrefs } from '@/lib/prefs';
-import { dayDiff, fmtDate, localDay, todayISO } from '@/lib/format';
+import { dayDiff, fmtDate, localDay, todayISO, isLive } from '@/lib/format';
 import { Icon } from '../Icon';
 import { Avatar, Avatars, Empty, PageHead, Skeleton, useDL } from '../bits';
 import { ProgressBar } from '../Progress';
@@ -26,9 +26,10 @@ export function TasksView() {
   const groups = [...L.groups.values()].filter((g) => g.deptId === me.deptId);
   let list = (tasks ?? []).filter((x) => (mine ? x.assigneeIds.includes(me.id) : x.deptId === me.deptId));
   if (!mine && group !== 'all') list = list.filter((x) => x.groupId === group);
+  const scheduled = mine ? [] : list.filter((x) => taskStatus(x, todayISO()) === 'scheduled').sort((a, b) => a.startDate.localeCompare(b.startDate));
   const cols: ['todo' | 'doing' | 'done', string, TaskDTO[]][] = [
-    ['todo', 'var(--line)', list.filter((x) => taskStatus(x) === 'todo')],
-    ['doing', 'var(--accent)', list.filter((x) => taskStatus(x) === 'doing')],
+    ['todo', 'var(--line)', list.filter((x) => taskStatus(x, todayISO()) === 'todo')],
+    ['doing', 'var(--accent)', list.filter((x) => taskStatus(x, todayISO()) === 'doing')],
     ['done', 'var(--gold)', list.filter((x) => x.completedAt && dayDiff(x.completedAt, todayISO()) <= 30).sort((a, b) => b.completedAt!.localeCompare(a.completedAt!))],
   ];
   return (
@@ -44,6 +45,7 @@ export function TasksView() {
           </div>
         </div>
       )}
+      {scheduled.length > 0 && <ScheduledPanel tasks={scheduled} />}
       {isLoading ? (
         <Skeleton h={320} />
       ) : (
@@ -75,7 +77,7 @@ export function GroupsView() {
       <div className="cards-auto">
         {groups.map((g) => {
           const ms = L.allPeople.filter((x) => x.groupIds.includes(g.id) && x.deptId === me.deptId && x.id !== me.id);
-          const openT = (tasks ?? []).filter((x) => x.groupId === g.id && !x.completedAt);
+          const openT = (tasks ?? []).filter((x) => x.groupId === g.id && !x.completedAt && isLive(x));
           const done = (tasks ?? []).filter((x) => x.groupId === g.id && x.completedAt).length;
           return (
             <section key={g.id} className="panel">
@@ -417,5 +419,36 @@ export function ActivityView() {
         )}
       </section>
     </>
+  );
+}
+
+/** Tasks whose start date is still ahead. Only managers and administrators receive these from the server. */
+export function ScheduledPanel({ tasks }: { tasks: TaskDTO[] }) {
+  const { t, tx, lang } = usePrefs();
+  const L = useLookup();
+  const { open } = useDrawer();
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2 style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Icon name="hourglass" />
+          {t('scheduledTitle')}
+          <span className="chip line">{tasks.length}</span>
+        </h2>
+      </div>
+      <p className="faint" style={{ fontSize: 13, marginTop: -8 }}>{t('scheduledSub')}</p>
+      <div className="list">
+        {tasks.map((x) => (
+          <button key={x.id} className="li" onClick={() => open({ type: 'task', id: x.id })}>
+            <span className="main-t">
+              <b>{tx(x.title)}</b>
+              <span>{tx(L.group(x.groupId)?.name)}</span>
+            </span>
+            <Avatars ids={x.assigneeIds} person={(id) => L.person(id)} max={3} />
+            <span className="due"><Icon name="hourglass" className="sm" />{t('startsOn', { date: fmtDate(x.startDate, lang) })}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }

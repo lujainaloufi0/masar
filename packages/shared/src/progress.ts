@@ -21,8 +21,19 @@ export function daysTaken(createdAt: Date | string, completedAt: Date | string):
   return Math.max(0, dayDiff(createdAt, completedAt));
 }
 
-export function taskStatus(t: { cancelledAt: unknown; completedAt: unknown; steps: ReadonlyArray<{ done: boolean }> }) {
+const ymd = (d: Date | string) => (typeof d === 'string' ? d.slice(0, 10) : d.toISOString().slice(0, 10));
+
+/** True when the task's start date is still ahead. `today` is YYYY-MM-DD in the organization's time zone. */
+export function isScheduled(t: { startDate?: Date | string | null }, today: string) {
+  return !!t.startDate && ymd(t.startDate) > today;
+}
+
+export function taskStatus(
+  t: { cancelledAt: unknown; completedAt: unknown; startDate?: Date | string | null; steps: ReadonlyArray<{ done: boolean }> },
+  today?: string,
+) {
   if (t.cancelledAt) return 'cancelled' as const;
+  if (today && !t.completedAt && isScheduled(t, today)) return 'scheduled' as const;
   if (t.completedAt) return 'done' as const;
   return progress(t.steps) > 0 ? ('doing' as const) : ('todo' as const);
 }

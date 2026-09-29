@@ -82,6 +82,8 @@ export interface SeedTask {
   by: string;
   assignees: string[];
   created: number;
+  /** days from today; in the future means scheduled */
+  start?: number;
   due: number;
   completed?: number;
   title: Pair;
@@ -161,6 +163,17 @@ export const TASKS: SeedTask[] = [
       ['Agree alert thresholds with Finance', 'الاتفاق على حدود التنبيه مع المالية'],
       ['Build the dashboards and alerts', 'بناء لوحات المتابعة والتنبيهات'],
       ['Run a test alert with the on-call rota', 'تجربة تنبيه مع جدول المناوبة'],
+    ], doneCount: 0, doneBy: [], baseDay: 0 },
+
+  // ---- IT, scheduled (only the head sees it until it starts)
+  { key: 't130', dept: 'it', group: 'g_plat', by: 'u3', assignees: ['u4', 'u5'], created: -1, start: 5, due: 19,
+    title: ['Plan the data centre power maintenance', 'التخطيط لصيانة الطاقة في مركز البيانات'],
+    desc: ['The facilities team will switch the data centre to generator power for a day. Keep critical systems running.', 'سيحوّل فريق المرافق مركز البيانات إلى المولدات ليوم واحد. يجب أن تبقى الأنظمة الحرجة تعمل.'],
+    steps: [
+      ['Agree the maintenance window with facilities', 'الاتفاق على نافذة الصيانة مع فريق المرافق'],
+      ['List systems that must stay online', 'حصر الأنظمة التي يجب أن تبقى متاحة'],
+      ['Test the generator failover', 'اختبار التحويل إلى المولدات'],
+      ['Notify all staff of the window', 'إبلاغ جميع الموظفين بموعد النافذة'],
     ], doneCount: 0, doneBy: [], baseDay: 0 },
 
   // ---- IT, completed

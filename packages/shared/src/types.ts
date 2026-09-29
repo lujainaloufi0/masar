@@ -26,13 +26,15 @@ export const ACTIVITY_TYPES = [
   'first_signin',
   'group_added',
   'head_changed',
+  'attachment_added',
+  'attachment_removed',
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 export const NOTIFICATION_TYPES = ['assigned', 'completed', 'flag', 'step', 'cancelled', 'overdue', 'pending_signin', 'emp_added'] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
-export type TaskStatus = 'todo' | 'doing' | 'done' | 'cancelled';
+export type TaskStatus = 'scheduled' | 'todo' | 'doing' | 'done' | 'cancelled';
 
 /* ---------- API shapes shared by the API and the web app ---------- */
 
@@ -97,12 +99,25 @@ export interface TaskDTO {
   title: Bilingual;
   desc: Bilingual;
   createdAt: string;
+  /** YYYY-MM-DD. Before this day the task is scheduled: only managers see it. */
+  startDate: string;
   dueDate: string;
   completedAt: string | null;
   cancelledAt: string | null;
   cancelledById: string | null;
   flagged: boolean;
   steps: StepDTO[];
+  attachmentCount: number;
+}
+
+export interface AttachmentDTO {
+  id: string;
+  taskId: string;
+  uploaderId: string | null;
+  name: string;
+  mime: string;
+  size: number;
+  createdAt: string;
 }
 
 /** A completed task as seen on the organization-wide board. */

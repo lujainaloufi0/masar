@@ -6,17 +6,27 @@ import { config } from '../common/config';
 import { Events } from '../realtime/events';
 import { NotificationsService } from '../notifications/notifications.service';
 import { seedDemo } from './seed';
+import { TasksService } from '../tasks/tasks.service';
 
 @Injectable()
 export class Scheduler implements OnModuleInit {
   private log = new Logger('Scheduler');
 
-  constructor(private registry: SchedulerRegistry, private prisma: PrismaService, private events: Events, private notes: NotificationsService) {}
+  constructor(
+    private registry: SchedulerRegistry,
+    private prisma: PrismaService,
+    private events: Events,
+    private notes: NotificationsService,
+    private tasks: TasksService,
+  ) {}
 
   onModuleInit() {
     const tz = process.env.TZ || 'Asia/Riyadh';
     // Every morning, remind heads about tasks that became overdue yesterday.
     this.add('overdue', '0 8 * * *', tz, () => this.overdue());
+    // Scheduled tasks become visible to their assignees on their start date.
+    this.add('announce', '1 * * * *', tz, async () => void (await this.tasks.announceStarted()));
+    setTimeout(() => void this.tasks.announceStarted().catch((e) => this.log.error('Announce failed', e)), 5_000);
     if (config.demoMode) {
       this.add('demo-reset', config.demoResetCron, tz, () => this.resetDemo());
       this.log.log(`Demo mode: data resets on "${config.demoResetCron}" (${tz})`);

@@ -8,6 +8,7 @@ const TaskBody = z.object({
   groupId: z.string().min(1),
   title: z.string().trim().min(1, 'errTitle').max(200),
   desc: z.string().max(4000).default(''),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'errStart').optional(),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'errDue'),
   assigneeIds: z.array(z.string()).min(1, 'errAssignee').max(50),
   steps: z.array(z.object({ id: z.string().nullish(), text: z.string().max(300) })).min(1, 'errSteps').max(60),

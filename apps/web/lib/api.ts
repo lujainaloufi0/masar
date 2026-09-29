@@ -27,6 +27,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   if (!res.ok) {
     const code =
       res.status === 429 ? 'errTooMany'
+      : res.status === 413 ? 'errFileTooBig'
       : typeof data?.code === 'string' ? data.code
       : res.status === 403 ? 'forbidden'
       : res.status === 404 ? 'notFound'
@@ -51,4 +52,22 @@ export function errorKey(e: unknown): string {
   if (e.code === 'notFound') return 'errNotFound';
   if (e.code === 'invalid') return Object.values(e.fields)[0] ?? 'errGeneric';
   return e.code;
+}
+
+/** Uploads one file as multipart form data. */
+export async function uploadFile<T>(path: string, file: File): Promise<T> {
+  const body = new FormData();
+  body.append('file', file);
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, { method: 'POST', credentials: 'same-origin', body });
+  } catch {
+    throw new ApiError(0, 'errNetwork');
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const code = res.status === 413 ? 'errFileTooBig' : res.status === 403 ? 'forbidden' : typeof data?.code === 'string' ? data.code : 'errGeneric';
+    throw new ApiError(res.status, code, data?.fields ?? {});
+  }
+  return data as T;
 }

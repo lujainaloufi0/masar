@@ -518,3 +518,32 @@ canvas.confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:non
   .hero.done .pring .tick path{stroke-dashoffset:0}
   .bar.celebrate,.pring.celebrate{animation:none}
 }
+
+/* ---------- Task drawer tabs and files ---------- */
+@layer components {
+.drawer-tabs{padding:12px 24px 0}
+.drawer-tabs .seg button{display:inline-flex;align-items:center;gap:6px}
+.tab-count{min-width:20px;height:18px;padding:0 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:11.5px;display:inline-grid;place-items:center}
+.banner.info{background:var(--surface-2);border-color:var(--line)}
+.banner.info .ico{color:var(--ink-2)}
+.dropzone{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:22px 16px;border:1.5px dashed var(--line);border-radius:14px;background:var(--surface-2);color:var(--ink-2);transition:border-color .15s,background .15s}
+.dropzone .ico{color:var(--ink-3)}
+.dropzone.over{border-color:var(--accent);background:var(--accent-soft)}
+.link-btn{color:var(--accent);font-weight:500;text-decoration:underline;text-underline-offset:3px}
+.files{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.fcard{position:relative;margin:0;display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:12px;overflow:hidden;background:var(--surface);min-width:0}
+.fthumb{display:block;aspect-ratio:4/3;width:100%;background:var(--surface-3);object-fit:cover}
+.fthumb img{width:100%;height:100%;object-fit:cover;display:block}
+video.fthumb{object-fit:contain;background:#000}
+.ficon{display:grid;place-items:center;align-content:center;gap:6px;color:var(--ink-3);text-decoration:none}
+.ficon .ext{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;color:var(--ink-2)}
+.fcard audio{padding:12px 8px 0}
+.fcard figcaption{display:flex;flex-direction:column;gap:2px;padding:8px 10px 10px}
+.fname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fmeta{font-size:11.5px;color:var(--ink-3)}
+.factions{position:absolute;top:6px;inset-inline-end:6px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.fcard:hover .factions,.fcard:focus-within .factions{opacity:1}
+.factions .icon-btn{width:30px;height:30px;background:color-mix(in oklab,var(--surface) 88%,transparent);box-shadow:var(--shadow-1)}
+@media (hover:none){.factions{opacity:1}}
+@media (max-width:560px){.drawer-tabs{padding-inline:16px}}
+}

@@ -5,6 +5,7 @@ import type { AuthUser } from '../common/auth';
 import { PERSON_INCLUDE, TASK_INCLUDE, toDept, toGroup, toPerson, toTask } from '../common/mappers';
 import { ActivityService } from '../activity/activity.service';
 import { Events } from '../realtime/events';
+import { orgToday } from '../common/today';
 
 const DAY = 86_400_000;
 
@@ -46,7 +47,11 @@ export class OrgService {
     const [depts, people, open, done] = await Promise.all([
       this.prisma.department.findMany({ select: { id: true } }),
       this.prisma.user.groupBy({ by: ['deptId'], where: { active: true }, _count: { _all: true } }),
-      this.prisma.task.groupBy({ by: ['deptId'], where: { completedAt: null, cancelledAt: null }, _count: { _all: true } }),
+      this.prisma.task.groupBy({
+        by: ['deptId'],
+        where: { completedAt: null, cancelledAt: null, startDate: { lte: new Date(orgToday() + 'T00:00:00Z') } },
+        _count: { _all: true },
+      }),
       this.prisma.task.findMany({ where: { cancelledAt: null, completedAt: { gte: new Date(now - 60 * DAY) } }, select: { deptId: true, createdAt: true, completedAt: true } }),
     ]);
     return depts.map(({ id }) => {

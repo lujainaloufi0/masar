@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { canCreateTask, canManageTask, canTickSteps, canViewTask, daysTaken, type TaskDTO } from '@masar/shared';
+import { canCreateTask, canManageTask, canTickSteps, canViewTask, daysTaken, isScheduled, type TaskDTO } from '@masar/shared';
+import { orgToday } from '../common/today';
 import { PrismaService } from '../common/prisma.service';
 import type { AuthUser } from '../common/auth';
 import { TASK_INCLUDE, toTask, taskRef, type TaskRow } from '../common/mappers';
@@ -11,6 +12,8 @@ export interface TaskInput {
   groupId: string;
   title: string;
   desc: string;
+  /** YYYY-MM-DD. Assignees see the task from this day. Defaults to today. */
+  startDate?: string;
   dueDate: string;
   assigneeIds: string[];
   steps: { id?: string | null; text: string }[];
@@ -21,8 +24,8 @@ export interface TaskInput {
 const bi = (t: TaskRow) => ({ en: t.titleEn, ar: t.titleAr });
 const logTask = (t: TaskRow) => ({ id: t.id, titleEn: t.titleEn, titleAr: t.titleAr, deptId: t.deptId });
 
-/** Today's date in Riyadh, as YYYY-MM-DD. */
-const todayLocal = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+const todayLocal = orgToday;
+const asDate = (ymd: string) => new Date(ymd + 'T00:00:00Z');
 
 @Injectable()
 export class TasksService {
@@ -42,7 +45,7 @@ export class TasksService {
   /** Loads a task the user may see. Other departments' tasks look the same as missing ones. */
   private async visible(me: AuthUser, id: string) {
     const t = await this.row(id);
-    if (!canViewTask(me, t)) throw new NotFoundException({ code: 'notFound' });
+    if (!canViewTask(me, taskRef(t), todayLocal())) throw new NotFoundException({ code: 'notFound' });
     return t;
   }
 
@@ -68,7 +71,9 @@ export class TasksService {
       include: TASK_INCLUDE,
       orderBy: { dueDate: 'asc' },
     });
-    return rows.map(toTask);
+    // Scheduled tasks stay out of sight for everyone who can't manage them.
+    const today = todayLocal();
+    return rows.filter((t) => canViewTask(me, taskRef(t), today)).map(toTask);
   }
 
   async get(me: AuthUser, id: string) {
@@ -95,22 +100,30 @@ export class TasksService {
     const g = await this.prisma.group.findUnique({ where: { id: input.groupId } });
     const deptId = g?.deptId ?? me.deptId;
     if (!canCreateTask(me, deptId)) throw new ForbiddenException({ code: 'forbidden' });
-    if (input.dueDate < todayLocal()) throw new BadRequestException({ code: 'invalid', fields: { dueDate: 'errDuePast' } });
+    const today = todayLocal();
+    const start = input.startDate || today;
+    if (start < today) throw new BadRequestException({ code: 'invalid', fields: { startDate: 'errStartPast' } });
+    if (input.dueDate < today) throw new BadRequestException({ code: 'invalid', fields: { dueDate: 'errDuePast' } });
+    if (input.dueDate < start) throw new BadRequestException({ code: 'invalid', fields: { dueDate: 'errDueBeforeStart' } });
     const { assigneeIds, steps } = await this.validate(deptId, input);
+    const started = start <= today;
     const title = input.title.trim();
     const desc = input.desc.trim();
     const t = await this.prisma.task.create({
       data: {
         deptId, groupId: input.groupId, createdById: me.id,
         titleEn: title, titleAr: title, descEn: desc, descAr: desc,
-        dueDate: new Date(input.dueDate + 'T00:00:00Z'),
+        startDate: asDate(start),
+        announced: started,
+        dueDate: asDate(input.dueDate),
         assignees: { create: assigneeIds.map((userId) => ({ userId })) },
         steps: { create: steps.map((s, i) => ({ position: i, textEn: s.text, textAr: s.text })) },
       },
       include: TASK_INCLUDE,
     });
     await this.activity.log({ type: 'task_created', actorId: me.id, task: logTask(t) });
-    await this.notes.send(assigneeIds, 'assigned', { actor: await this.nameOf(me.id), task: bi(t) }, t.id, me.id);
+    // A scheduled task is announced to its assignees on its start date instead.
+    if (started) await this.notes.send(assigneeIds, 'assigned', { actor: await this.nameOf(me.id), task: bi(t) }, t.id, me.id);
     return this.publish(t.id);
   }
 
@@ -130,6 +143,16 @@ export class TasksService {
     const desc = text(input.desc.trim(), t.descEn, t.descAr);
     const added = assigneeIds.filter((a) => !before.includes(a));
     const oldSteps = new Map(t.steps.map((s) => [s.id, s]));
+    const today = todayLocal();
+    const oldStart = t.startDate.toISOString().slice(0, 10);
+    const start = input.startDate || oldStart;
+    // Moving the start into the future is only possible before anyone has done any work on it.
+    if (start > today && start !== oldStart && t.steps.some((x) => x.doneAt)) {
+      throw new BadRequestException({ code: 'invalid', fields: { startDate: 'errStartAfterWork' } });
+    }
+    if (input.dueDate < start) throw new BadRequestException({ code: 'invalid', fields: { dueDate: 'errDueBeforeStart' } });
+    const started = start <= today;
+    const announceNow = started && !t.announced;
 
     await this.prisma.$transaction(async (tx) => {
       const keep = steps.filter((s) => s.id && oldSteps.has(s.id)).map((s) => s.id!);
@@ -150,7 +173,8 @@ export class TasksService {
         where: { id },
         data: {
           titleEn: title.en, titleAr: title.ar, descEn: desc.en, descAr: desc.ar,
-          groupId: input.groupId, dueDate: new Date(input.dueDate + 'T00:00:00Z'),
+          groupId: input.groupId, startDate: asDate(start), dueDate: asDate(input.dueDate),
+          announced: started,
           flagged: added.length ? false : t.flagged && remaining.some((r) => !r.active),
         },
       });
@@ -158,7 +182,8 @@ export class TasksService {
     const fresh = await this.row(id);
     await this.activity.log({ type: 'task_edited', actorId: me.id, task: logTask(fresh) });
     await this.settleCompletion(me, fresh);
-    await this.notes.send(added, 'assigned', { actor: await this.nameOf(me.id), task: bi(fresh) }, id, me.id);
+    if (announceNow) await this.notes.send(assigneeIds, 'assigned', { actor: await this.nameOf(me.id), task: bi(fresh) }, id, me.id);
+    else if (started) await this.notes.send(added, 'assigned', { actor: await this.nameOf(me.id), task: bi(fresh) }, id, me.id);
     return this.publish(id);
   }
 
@@ -189,7 +214,7 @@ export class TasksService {
 
   async toggleStep(me: AuthUser, id: string, stepId: string, done?: boolean) {
     const t = await this.visible(me, id);
-    if (!canTickSteps(me, taskRef(t))) throw new ForbiddenException({ code: 'forbidden' });
+    if (!canTickSteps(me, taskRef(t), todayLocal())) throw new ForbiddenException({ code: 'forbidden' });
     const step = t.steps.find((s) => s.id === stepId);
     if (!step) throw new NotFoundException({ code: 'notFound' });
     const next = done ?? !step.doneAt;
@@ -250,7 +275,7 @@ export class TasksService {
       this.prisma.task.update({ where: { id }, data: { flagged: false } }),
     ]);
     await this.activity.log({ type: 'assignee_added', actorId: me.id, task: logTask(t), subject: { id: userId, deptId: t.deptId } });
-    await this.notes.send([userId], 'assigned', { actor: await this.nameOf(me.id), task: bi(t) }, id, me.id);
+    if (!isScheduled(taskRef(t), todayLocal())) await this.notes.send([userId], 'assigned', { actor: await this.nameOf(me.id), task: bi(t) }, id, me.id);
     return this.publish(id);
   }
 
@@ -266,5 +291,23 @@ export class TasksService {
     ]);
     await this.activity.log({ type: 'assignee_removed', actorId: me.id, task: logTask(t), subject: { id: userId, deptId: t.deptId } });
     return this.publish(id);
+  }
+
+  /**
+   * Tells assignees about scheduled tasks whose start date has arrived, and shows them on
+   * the assignees' boards. Runs every hour and at start-up, so a sleeping server catches up.
+   */
+  async announceStarted() {
+    const due = await this.prisma.task.findMany({
+      where: { announced: false, cancelledAt: null, startDate: { lte: asDate(todayLocal()) } },
+      include: TASK_INCLUDE,
+    });
+    for (const t of due) {
+      const r = await this.prisma.task.updateMany({ where: { id: t.id, announced: false }, data: { announced: true } });
+      if (!r.count) continue;
+      await this.notes.send(t.assignees.map((a) => a.userId), 'assigned', { actor: await this.nameOf(t.createdById), task: bi(t) }, t.id);
+      await this.publish(t.id);
+    }
+    return due.length;
   }
 }

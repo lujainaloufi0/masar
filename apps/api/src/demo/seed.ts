@@ -23,6 +23,7 @@ export const DEMO_ACTIVATION_CODE = 'WAHA-2026';
 
 /** Removes all data, in dependency order. */
 export async function wipe(prisma: PrismaClient | Prisma.TransactionClient) {
+  await prisma.attachment.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.activity.deleteMany();
   await prisma.step.deleteMany();
@@ -86,6 +87,8 @@ export async function seedDemo(prisma: PrismaClient, now = new Date()) {
             deptId: dept[t.dept], groupId: group[t.group], createdById: user[t.by],
             titleEn: t.title[0], titleAr: t.title[1], descEn: t.desc?.[0] ?? '', descAr: t.desc?.[1] ?? '',
             createdAt: dayOffset(now, t.created, '08:30'),
+            startDate: dateOnly(now, t.start ?? t.created),
+            announced: (t.start ?? 0) <= 0,
             dueDate: dateOnly(now, t.due),
             completedAt: t.completed != null ? dayOffset(now, t.completed, '15:00') : null,
             assignees: { create: t.assignees.map((a) => ({ userId: user[a] })) },

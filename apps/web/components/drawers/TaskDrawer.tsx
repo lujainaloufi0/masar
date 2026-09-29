@@ -2,11 +2,12 @@
 import { animate } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { canManageTask, canTickSteps, daysTaken, progress, taskStatus, type TaskDTO } from '@masar/shared';
+import { canManageTask, canTickSteps, daysTaken, isScheduled, progress, taskStatus, type TaskDTO } from '@masar/shared';
+import { FilesTab } from './FilesTab';
 import { api, errorKey } from '@/lib/api';
 import { dropTask, keys, putTask, useLookup, useTask } from '@/lib/data';
 import { usePrefs } from '@/lib/prefs';
-import { fillMs, fmtDate, fmtLong, reducedMotion } from '@/lib/format';
+import { fillMs, fmtDate, fmtLong, reducedMotion, todayISO } from '@/lib/format';
 import { stepsLeftLabel } from '@/lib/i18n';
 import { Icon } from '../Icon';
 import { Avatar, Empty, Skeleton, useDL } from '../bits';
@@ -51,7 +52,10 @@ function TaskBody({ task }: { task: TaskDTO }) {
   const [phase, setPhase] = useState<Phase>(task.completedAt ? 'settled' : 'idle');
 
   const p = progress(task.steps);
-  const canTick = canTickSteps(me, task);
+  const today = todayISO();
+  const scheduled = isScheduled(task, today);
+  const canTick = canTickSteps(me, task, today);
+  const [tab, setTab] = useState<'overview' | 'files'>('overview');
   const canManage = canManageTask(me, task);
   const dept = L.dept(task.deptId);
   const group = L.group(task.groupId);
@@ -155,8 +159,9 @@ function TaskBody({ task }: { task: TaskDTO }) {
   const heading = showDone ? t('doneTitle') : t('pct', { p: Math.round(p * 100) });
   const sub = showDone
     ? t('doneInBy', { d: DL(daysTaken(task.createdAt, task.completedAt!)), names: task.assigneeIds.map((a) => tx(L.person(a)?.name).split(' ')[0]).join(lang === 'ar' ? ' و' : ' and ') })
+    : scheduled ? t('startsOn', { date: fmtLong(task.startDate, lang) })
     : p === 0 ? t('notStartedMsg') : left ? stepsLeftLabel(left, lang) : '';
-  const st = taskStatus(task);
+  const st = taskStatus(task, today);
   const chipStatus = st === 'done' && !showDone ? 'doing' : st;
 
   const candidates = L.allPeople.filter((x) => x.active && x.deptId === task.deptId && !task.assigneeIds.includes(x.id) && x.role !== 'hr');
@@ -179,7 +184,25 @@ function TaskBody({ task }: { task: TaskDTO }) {
         )}
         <button className="icon-btn" onClick={close} aria-label={t('close')}><Icon name="x" /></button>
       </div>
+      <div className="drawer-tabs">
+        <div className="seg" role="tablist" aria-label={tx(task.title)}>
+          <button role="tab" aria-selected={tab === 'overview'} aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}>
+            {t('tab_overview')}
+          </button>
+          <button role="tab" aria-selected={tab === 'files'} aria-pressed={tab === 'files'} onClick={() => setTab('files')}>
+            <Icon name="clip" className="sm" />
+            {t('tab_files')}
+            {task.attachmentCount > 0 && <span className="tab-count">{task.attachmentCount}</span>}
+          </button>
+        </div>
+      </div>
+      {tab === 'files' ? (
+        <FilesTab task={task} />
+      ) : (
       <div className="drawer-b">
+        {scheduled && !task.cancelledAt && (
+          <div className="banner info"><Icon name="hourglass" /><p>{t('scheduledBanner', { date: fmtLong(task.startDate, lang) })}</p></div>
+        )}
         {task.cancelledAt && (
           <div className="banner">
             <Icon name="x" />
@@ -257,7 +280,7 @@ function TaskBody({ task }: { task: TaskDTO }) {
               );
             })}
           </div>
-          {!canTick && !task.cancelledAt && (
+          {!canTick && !task.cancelledAt && !scheduled && (
             <p className="readonly-note"><Icon name="lock" className="sm" />{t('readOnly')}</p>
           )}
         </div>
@@ -307,6 +330,7 @@ function TaskBody({ task }: { task: TaskDTO }) {
         <dl className="kv">
           <dt>{t('createdBy')}</dt><dd>{tx(L.person(task.createdById)?.name) || t('someone')}</dd>
           <dt>{t('created')}</dt><dd>{fmtLong(task.createdAt, lang)}</dd>
+          <dt>{t('startDate')}</dt><dd>{fmtLong(task.startDate, lang)}</dd>
           <dt>{t('due')}</dt><dd>{fmtLong(task.dueDate, lang)}</dd>
         </dl>
 
@@ -361,6 +385,7 @@ function TaskBody({ task }: { task: TaskDTO }) {
           </div>
         )}
       </div>
+      )}
     </>
   );
 }

@@ -21,6 +21,7 @@ export const keys = {
   activity: ['activity'] as const,
   notifications: ['notifications'] as const,
   employees: ['employees'] as const,
+  attachments: (taskId: string) => ['attachments', taskId] as const,
 };
 
 export const useBootstrap = () => useQuery({ queryKey: keys.bootstrap, queryFn: () => api<BootstrapDTO>('/bootstrap') });
@@ -46,6 +47,7 @@ export function useTask(id: string | null) {
 /** Writes a fresh task into every cached view of it, then refreshes the derived lists. */
 export function putTask(qc: QueryClient, task: TaskDTO) {
   qc.setQueryData(keys.task(task.id), task);
+  qc.invalidateQueries({ queryKey: keys.attachments(task.id) });
   qc.setQueryData<TaskDTO[]>(keys.tasks, (list) => {
     if (!list) return list;
     const i = list.findIndex((t) => t.id === task.id);

@@ -44,9 +44,9 @@ export function useDL() {
 
 export function StatusChip({ task, id, className = '' }: { task: TaskDTO; id?: string; className?: string }) {
   const { t } = usePrefs();
-  const s = taskStatus(task);
+  const s = taskStatus(task, todayISO());
   return (
-    <span id={id} className={`chip ${className} ${s === 'done' ? 'gold' : s === 'doing' ? 'ok' : s === 'cancelled' ? 'warn' : ''}`}>
+    <span id={id} className={`chip ${className} ${s === 'done' ? 'gold' : s === 'doing' ? 'ok' : s === 'cancelled' ? 'warn' : s === 'scheduled' ? 'line' : ''}`}>
       {t(s)}
     </span>
   );
@@ -62,6 +62,8 @@ export function DueInfo({ task }: { task: TaskDTO }) {
         {fmtDate(task.completedAt, lang)}
       </span>
     );
+  if (task.startDate > todayISO())
+    return <span className="due"><Icon name="hourglass" className="sm" />{t('startsOn', { date: fmtDate(task.startDate, lang) })}</span>;
   const d = dayDiff(todayISO(), task.dueDate);
   if (d < 0) return <span className="due late"><Icon name="clock" className="sm" />{t('overdue', { d: DL(-d) })}</span>;
   if (d === 0) return <span className="due soon"><Icon name="clock" className="sm" />{t('dueToday')}</span>;

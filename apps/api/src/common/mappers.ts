@@ -1,12 +1,13 @@
-import type { Activity, Department, Group, Notification, Prisma, Step, Task, User } from '@prisma/client';
-import type { ActivityDTO, ActivityType, DepartmentDTO, GroupDTO, NotificationDTO, NotificationType, PersonDTO, StepDTO, TaskDTO } from '@masar/shared';
+import type { Activity, Attachment, Department, Group, Notification, Prisma, Step, Task, User } from '@prisma/client';
+import type { ActivityDTO, ActivityType, AttachmentDTO, DepartmentDTO, GroupDTO, NotificationDTO, NotificationType, PersonDTO, StepDTO, TaskDTO } from '@masar/shared';
 
 export const TASK_INCLUDE = {
   assignees: { select: { userId: true } },
   steps: { orderBy: { position: 'asc' } },
+  _count: { select: { attachments: true } },
 } satisfies Prisma.TaskInclude;
 
-export type TaskRow = Task & { assignees: { userId: string }[]; steps: Step[] };
+export type TaskRow = Task & { assignees: { userId: string }[]; steps: Step[]; _count?: { attachments: number } };
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -24,17 +25,25 @@ export function toTask(t: TaskRow): TaskDTO {
     title: { en: t.titleEn, ar: t.titleAr },
     desc: { en: t.descEn, ar: t.descAr },
     createdAt: t.createdAt.toISOString(),
+    startDate: t.startDate.toISOString().slice(0, 10),
     dueDate: t.dueDate.toISOString().slice(0, 10),
     completedAt: iso(t.completedAt),
     cancelledAt: iso(t.cancelledAt),
     cancelledById: t.cancelledById,
     flagged: t.flagged,
     steps: t.steps.map(toStep),
+    attachmentCount: t._count?.attachments ?? 0,
   };
 }
 
 /** The actor/permission view of a task row. */
-export const taskRef = (t: TaskRow) => ({ deptId: t.deptId, createdById: t.createdById, assigneeIds: t.assignees.map((a) => a.userId), cancelledAt: t.cancelledAt });
+export const taskRef = (t: TaskRow) => ({
+  deptId: t.deptId,
+  createdById: t.createdById,
+  assigneeIds: t.assignees.map((a) => a.userId),
+  cancelledAt: t.cancelledAt,
+  startDate: t.startDate.toISOString().slice(0, 10),
+});
 
 export function toPerson(u: User & { groups: { groupId: string }[] }): PersonDTO {
   return {
@@ -75,3 +84,13 @@ export function toNotification(n: Notification): NotificationDTO {
 }
 
 export const PERSON_INCLUDE = { groups: { select: { groupId: true } } } satisfies Prisma.UserInclude;
+
+export const toAttachment = (a: Omit<Attachment, 'data'>): AttachmentDTO => ({
+  id: a.id,
+  taskId: a.taskId,
+  uploaderId: a.uploaderId,
+  name: a.name,
+  mime: a.mime,
+  size: a.size,
+  createdAt: a.createdAt.toISOString(),
+});

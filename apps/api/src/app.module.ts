@@ -18,6 +18,7 @@ import { ActivityService } from './activity/activity.service';
 import { NotificationsService } from './notifications/notifications.service';
 import { Events, EventsGateway } from './realtime/events';
 import { Scheduler } from './demo/demo.scheduler';
+import { AttachmentsController, AttachmentsService } from './attachments/attachments';
 
 @Controller('health')
 class HealthController {
@@ -38,7 +39,7 @@ class HealthController {
     // General limit for every route; login and password routes set a stricter one.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
   ],
-  controllers: [HealthController, AuthController, TasksController, PeopleController, OrgController],
+  controllers: [HealthController, AuthController, TasksController, PeopleController, OrgController, AttachmentsController],
   providers: [
     SessionVerifier,
     AuthService,
@@ -50,6 +51,7 @@ class HealthController {
     EventsGateway,
     Events,
     Scheduler,
+    AttachmentsService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
   ],

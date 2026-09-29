@@ -78,6 +78,7 @@ model User {
   cancelledTasks Task[]           @relation("TaskCanceller")
   assignments   TaskAssignee[]
   stepsDone     Step[]
+  uploads       Attachment[]
   activity      Activity[]        @relation("ActivityActor")
   activityAbout Activity[]        @relation("ActivitySubject")
   notifications Notification[]
@@ -107,6 +108,10 @@ model Task {
   descEn        String    @default("")
   descAr        String    @default("")
   createdAt     DateTime  @default(now())
+  /// assignees see the task from this day; before it, only managers do
+  startDate     DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
+  /// set once assignees have been told the task started
+  announced     Boolean   @default(true)
   dueDate       DateTime  @db.Date
   completedAt   DateTime?
   cancelledAt   DateTime?
@@ -116,6 +121,7 @@ model Task {
   flagged       Boolean   @default(false)
   assignees     TaskAssignee[]
   steps         Step[]
+  attachments   Attachment[]
 
   @@index([deptId, completedAt])
 }
@@ -176,4 +182,20 @@ model Notification {
   params Json     @default("{}")
 
   @@index([userId, at])
+}
+
+/// A file attached to a task. Stored in the database so it works on hosts without a persistent disk.
+model Attachment {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploaderId String?
+  uploader   User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  name       String
+  mime       String
+  size       Int
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  @@index([taskId, createdAt])
 }

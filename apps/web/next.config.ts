@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   devIndicators: false,
   transpilePackages: ['@masar/shared'],
+  // Uploads pass through proxy.ts on their way to the API (20 MB files, plus form overhead).
+  experimental: { proxyClientMaxBodySize: '21mb' },
   async headers() {
     return [
       {

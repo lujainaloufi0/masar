@@ -101,6 +101,19 @@ const en = {
   errForbidden: "You don't have permission to do that.", errNotFound: 'This item no longer exists or is not visible to you.',
   loading: 'Loading…', skip: 'Skip to content',
   waking: 'Starting up the server… this can take up to a minute after a quiet spell.',
+  scheduled: 'Scheduled', scheduledTitle: 'Scheduled', scheduledSub: 'Only you and administrators can see these until they start. Assignees are notified on the start date.',
+  f_start: 'Start date', f_startHint: 'Assignees see the task from this day.', startsOn: 'Starts {date}',
+  errStart: 'Choose a start date.', errStartPast: 'Choose today or a later date.', errDueBeforeStart: 'The due date must be on or after the start date.',
+  errStartAfterWork: "Work has already started on this task, so its start date can't move into the future.",
+  scheduledBanner: 'Scheduled. Assignees will see this task from {date}.', startDate: 'Start date',
+  tab_overview: 'Overview', tab_files: 'Files',
+  dropFiles: 'Drop files here, or', chooseFiles: 'choose files', fileLimit: 'Images, videos, documents: up to 20 MB each.',
+  noFiles: 'No files yet.', filesReadOnly: 'Only people assigned to this task and its managers can add files.',
+  uploading: 'Uploading {name}…', fileAdded: 'File added', filesAdded: '{n} files added', fileDeleted: 'File deleted',
+  deleteFile: 'Delete {name}', download: 'Download', openFile: 'Open {name}',
+  errFileTooBig: 'That file is larger than 20 MB.', errFileTooBigNamed: '{name} is larger than 20 MB.', errTooManyFiles: 'This task already has the maximum of 50 files.',
+  errFileMissing: 'Choose a file to upload.',
+  ev_attachment_added: '{actor} added a file to \u201c{task}\u201d', ev_attachment_removed: '{actor} removed a file from \u201c{task}\u201d',
 };
 
 export type Key = keyof typeof en;
@@ -205,6 +218,19 @@ const ar: Partial<Record<Key, string>> = {
   errForbidden: 'ليست لديك صلاحية لهذا الإجراء.', errNotFound: 'هذا العنصر لم يعد موجودًا أو غير متاح لك.',
   loading: 'جارٍ التحميل…', skip: 'تخطَّ إلى المحتوى',
   waking: 'جارٍ تشغيل الخادم… قد يستغرق ذلك دقيقة بعد فترة من عدم الاستخدام.',
+  scheduled: 'مجدولة', scheduledTitle: 'المهام المجدولة', scheduledSub: 'لا يراها إلا أنت ومسؤولو النظام حتى يحين موعد بدئها، ويُنبَّه المسندة إليهم في تاريخ البدء.',
+  f_start: 'تاريخ البدء', f_startHint: 'يرى المسندة إليهم المهمة ابتداءً من هذا اليوم.', startsOn: 'تبدأ في {date}',
+  errStart: 'اختر تاريخ البدء.', errStartPast: 'اختر تاريخ اليوم أو تاريخًا لاحقًا.', errDueBeforeStart: 'يجب أن يكون تاريخ الاستحقاق في يوم البدء أو بعده.',
+  errStartAfterWork: 'بدأ العمل على هذه المهمة، فلا يمكن تأجيل تاريخ بدئها.',
+  scheduledBanner: 'مهمة مجدولة، يراها المسندة إليهم ابتداءً من {date}.', startDate: 'تاريخ البدء',
+  tab_overview: 'نظرة عامة', tab_files: 'الملفات',
+  dropFiles: 'أفلت الملفات هنا، أو', chooseFiles: 'اختر ملفات', fileLimit: 'صور وفيديو ومستندات: حتى 20 ميجابايت لكل ملف.',
+  noFiles: 'لا توجد ملفات بعد.', filesReadOnly: 'يمكن للمسندة إليهم المهمة ومديريها فقط إضافة الملفات.',
+  uploading: 'جارٍ رفع {name}…', fileAdded: 'أُضيف الملف', filesAdded: 'أُضيف {n} ملفات', fileDeleted: 'حُذف الملف',
+  deleteFile: 'حذف {name}', download: 'تنزيل', openFile: 'فتح {name}',
+  errFileTooBig: 'حجم الملف أكبر من 20 ميجابايت.', errFileTooBigNamed: 'حجم {name} أكبر من 20 ميجابايت.', errTooManyFiles: 'وصلت هذه المهمة إلى الحد الأقصى وهو 50 ملفًا.',
+  errFileMissing: 'اختر ملفًا للرفع.',
+  ev_attachment_added: 'إضافة ملف إلى «{task}» بواسطة {actor}', ev_attachment_removed: 'حذف ملف من «{task}» بواسطة {actor}',
 };
 
 export const DICT: Record<Lang, Partial<Record<Key, string>>> = { en, ar };

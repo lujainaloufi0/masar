@@ -91,6 +91,24 @@ The browser only ever talks to the web app's address. The web app forwards anyth
 
 ---
 
+### Scheduled tasks
+A task has a **start date** (`startDate`) as well as a due date. While the start date is still ahead, the task is *scheduled*:
+- Only people who can manage it (its creator, the department head, admins) receive it from the API. Members' task lists, the activity log and live updates all leave it out.
+- Nobody can tick its steps yet.
+- A job runs every hour, and once when the API starts, looking for scheduled tasks whose day has come. It marks them `announced`, notifies the assignees and pushes the task to their screens. Because it also runs at start-up, a server that was asleep catches up as soon as it wakes.
+
+The rule lives in `packages/shared` (`isScheduled`, `canViewTask`, `canTickSteps`), so the API and web app agree.
+
+### Files on tasks
+Files are stored in the database (the `Attachment` table), so they work on hosts without a permanent disk. Limits: 20 MB a file, 50 files a task.
+- Assignees and task managers can upload. Anyone who can see the task can view and download. The uploader or a task manager can delete.
+- Only safe types (common images, videos, audio and PDF) open inside the browser. Everything else is sent as a download with a strict security header, so an uploaded web page can never run as part of Masar.
+- Uploads pass through the web app's `proxy.ts`; `proxyClientMaxBodySize` in `next.config.ts` allows them through.
+
+**When it breaks:** "That file is larger than 20 MB" means the limit, set by `MAX_FILE_BYTES` in `apps/api/src/attachments/attachments.ts` (change the web app's `MAX_BYTES` and `proxyClientMaxBodySize` to match). If uploads fail on hosting with a free database, check the database hasn't run out of space.
+
+---
+
 ## 5. Sign-in and security
 
 - **Employee ID + password.** Passwords are stored as argon2 hashes, a slow, salted fingerprint that can't be turned back into the password.

@@ -1,10 +1,11 @@
 'use client';
 import { useActivity, useLookup, useStats, useTasks } from '@/lib/data';
 import { usePrefs } from '@/lib/prefs';
-import { dayDiff, fmtDate, todayISO } from '@/lib/format';
+import { dayDiff, fmtDate, todayISO, isLive } from '@/lib/format';
 import { Icon } from '../Icon';
 import { Avatar, DueInfo, Empty, PageHead, Skeleton, useDL } from '../bits';
 import { useDrawer } from '../drawer-ctx';
+import { ScheduledPanel } from './Pages';
 import { AvgPanel, DateLine, DeptProgressPanel, Feed, Greeting, NewTaskButton, TaskCard, ViewAll } from './common';
 
 export function Overview() {
@@ -25,10 +26,11 @@ function WorkOverview() {
   const { data: activity } = useActivity();
   const mine = me.role === 'member';
   const active = (tasks ?? [])
-    .filter((x) => !x.completedAt && (mine ? x.assigneeIds.includes(me.id) : x.deptId === me.deptId))
+    .filter((x) => !x.completedAt && isLive(x) && (mine ? x.assigneeIds.includes(me.id) : x.deptId === me.deptId))
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const soon = active.filter((x) => dayDiff(todayISO(), x.dueDate) <= 7);
   const flagged = mine ? [] : active.filter((x) => x.flagged);
+  const scheduled = mine ? [] : (tasks ?? []).filter((x) => x.deptId === me.deptId && !x.cancelledAt && !isLive(x)).sort((a, b) => a.startDate.localeCompare(b.startDate));
   const dept = tx(L.dept(me.deptId)?.name);
 
   return (
@@ -54,6 +56,7 @@ function WorkOverview() {
           <div className="panel"><Empty icon="tasks">{t('noActiveTasks')}</Empty></div>
         )}
       </section>
+      {scheduled.length > 0 && <ScheduledPanel tasks={scheduled} />}
       <div className="grid-2">
         <DeptProgressPanel deptId={me.deptId} />
         <AvgPanel highlight={me.deptId} />

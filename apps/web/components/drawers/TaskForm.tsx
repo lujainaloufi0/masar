@@ -46,6 +46,7 @@ function Form({ task }: { task?: TaskDTO }) {
   const [title, setTitle] = useState(task ? tx(task.title) : '');
   const [desc, setDesc] = useState(task ? tx(task.desc) : '');
   const [groupId, setGroupId] = useState(task?.groupId ?? groups[0]?.id ?? '');
+  const [start, setStart] = useState(task?.startDate ?? todayISO());
   const [due, setDue] = useState(task?.dueDate ?? inAWeek());
   const [assignees, setAssignees] = useState<string[]>(task?.assigneeIds ?? []);
   const [steps, setSteps] = useState<StepRow[]>(() =>
@@ -62,8 +63,11 @@ function Form({ task }: { task?: TaskDTO }) {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!title.trim()) e.title = 'errTitle';
+    if (!start) e.start = 'errStart';
+    else if (!task && start < todayISO()) e.start = 'errStartPast';
     if (!due) e.due = 'errDue';
     else if (!task && due < todayISO()) e.due = 'errDuePast';
+    else if (start && due < start) e.due = 'errDueBeforeStart';
     if (!assignees.length) e.as = 'errAssignee';
     if (!steps.some((s) => s.text.trim())) e.steps = 'errSteps';
     return e;
@@ -79,7 +83,7 @@ function Form({ task }: { task?: TaskDTO }) {
     }
     setSaving(true);
     const body = {
-      groupId, title, desc, dueDate: due, assigneeIds: assignees, lang,
+      groupId, title, desc, startDate: start, dueDate: due, assigneeIds: assignees, lang,
       steps: steps.filter((s) => s.text.trim()).map((s) => ({ id: s.id, text: s.text })),
     };
     try {
@@ -95,7 +99,7 @@ function Form({ task }: { task?: TaskDTO }) {
     } catch (x) {
       if (x instanceof ApiError && x.code === 'invalid') {
         const f = x.fields;
-        setErr({ title: f.title, due: f.dueDate, as: f.assigneeIds, steps: f.steps, group: f.groupId });
+        setErr({ title: f.title, start: f.startDate, due: f.dueDate, as: f.assigneeIds, steps: f.steps, group: f.groupId });
       } else toast(t(errorKey(x)), 'err');
     } finally {
       setSaving(false);
@@ -123,8 +127,7 @@ function Form({ task }: { task?: TaskDTO }) {
             </label>
             <textarea className="textarea" id="ntDesc" value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={4000} />
           </div>
-          <div className="row2">
-            <div className="field">
+          <div className="field">
               <label htmlFor="ntGroup">{t('f_group')}</label>
               <select
                 className="select"
@@ -138,10 +141,16 @@ function Form({ task }: { task?: TaskDTO }) {
                 {groups.map((g) => <option key={g.id} value={g.id}>{tx(g.name)}</option>)}
               </select>
               <FieldErr msg={msg('group')} />
+          </div>
+          <div className="row2">
+            <div className="field">
+              <label htmlFor="ntStart">{t('f_start')}</label>
+              <input className="input" type="date" id="ntStart" value={start} min={task ? undefined : todayISO()} onChange={(e) => setStart(e.target.value)} aria-invalid={!!err.start} />
+              {err.start ? <FieldErr msg={msg('start')} /> : <span className="hint">{t('f_startHint')}</span>}
             </div>
             <div className="field">
               <label htmlFor="ntDue">{t('f_due')}</label>
-              <input className="input" type="date" id="ntDue" value={due} min={task ? undefined : todayISO()} onChange={(e) => setDue(e.target.value)} aria-invalid={!!err.due} />
+              <input className="input" type="date" id="ntDue" value={due} min={start || (task ? undefined : todayISO())} onChange={(e) => setDue(e.target.value)} aria-invalid={!!err.due} />
               <FieldErr msg={msg('due')} />
             </div>
           </div>

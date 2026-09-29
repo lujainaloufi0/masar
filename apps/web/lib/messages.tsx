@@ -40,7 +40,7 @@ export const activityIcon = (type: string): [IconName, string] =>
     task_edited: ['edit', ''], task_cancelled: ['x', 'warn'], task_restored: ['reset', 'ok'], task_deleted: ['trash', 'danger'],
     task_created: ['plus', ''], step_done: ['check', 'ok'], step_undone: ['reset', ''], task_completed: ['completed', 'gold'], task_reopened: ['reset', 'warn'],
     emp_added: ['userPlus', 'ok'], emp_updated: ['edit', ''], emp_deactivated: ['userX', 'danger'], emp_reactivated: ['userCheck', 'ok'], first_signin: ['key', 'ok'],
-    assignee_added: ['userPlus', ''], assignee_removed: ['userX', ''], group_added: ['groups', 'ok'], head_changed: ['shield', ''],
+    assignee_added: ['userPlus', ''], assignee_removed: ['userX', ''], group_added: ['groups', 'ok'], head_changed: ['shield', ''], attachment_added: ['clip', ''], attachment_removed: ['clip', ''],
   }) as Record<string, [IconName, string]>)[type] ?? ['activity', ''];
 
 export function notificationText(n: NotificationDTO, lang: Lang) {

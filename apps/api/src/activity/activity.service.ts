@@ -4,6 +4,7 @@ import type { ActivityType } from '@masar/shared';
 import { PrismaService } from '../common/prisma.service';
 import type { AuthUser } from '../common/auth';
 import { toActivity } from '../common/mappers';
+import { orgToday } from '../common/today';
 
 type Db = PrismaService | Prisma.TransactionClient;
 
@@ -46,12 +47,27 @@ export class ActivityService {
       : me.role === 'hr' ? { OR: [{ subjectId: { not: null } }, { deptId: me.deptId }] }
       : me.role === 'manager' ? { deptId: me.deptId }
       : { deptId: me.deptId, taskId: { not: null } };
-    const rows = await this.prisma.activity.findMany({ where, orderBy: { at: 'desc' }, take: me.role === 'member' ? limit * 3 : limit });
+    const all = await this.prisma.activity.findMany({ where, orderBy: { at: 'desc' }, take: me.role === 'member' ? limit * 3 : limit });
+    // Entries about scheduled tasks stay hidden from anyone who can't see the task yet.
+    const rows = me.role === 'admin' ? all : await this.withoutHiddenScheduled(me, all);
     if (me.role !== 'member') return rows.map(toActivity);
     const taskIds = [...new Set(rows.map((r) => r.taskId!).filter(Boolean))];
     const mine = new Set(
       (await this.prisma.taskAssignee.findMany({ where: { userId: me.id, taskId: { in: taskIds } }, select: { taskId: true } })).map((r) => r.taskId),
     );
     return rows.filter((r) => r.actorId === me.id || mine.has(r.taskId!)).slice(0, limit).map(toActivity);
+  }
+
+  private async withoutHiddenScheduled<T extends { taskId: string | null }>(me: AuthUser, rows: T[]) {
+    const ids = [...new Set(rows.map((r) => r.taskId).filter((x): x is string => !!x))];
+    if (!ids.length) return rows;
+    const scheduled = await this.prisma.task.findMany({
+      where: { id: { in: ids }, startDate: { gt: new Date(orgToday() + 'T00:00:00Z') } },
+      select: { id: true, deptId: true, createdById: true },
+    });
+    const hidden = new Set(
+      scheduled.filter((t) => !(t.createdById === me.id || (me.role === 'manager' && me.deptId === t.deptId))).map((t) => t.id),
+    );
+    return rows.filter((r) => !r.taskId || !hidden.has(r.taskId));
   }
 }

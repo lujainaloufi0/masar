@@ -219,3 +219,82 @@ describe('rate limit', () => {
     expect(codes[5]).toBe(429);
   });
 });
+
+describe('scheduled tasks', () => {
+  const title = 'Plan the data centre power maintenance';
+
+  it('are hidden from assignees until their start date, but not from the head', async () => {
+    const omar = await signIn('WDA-10482');
+    const reem = await signIn('WDA-10377');
+    const t = await taskByTitle(title);
+    expect(((await omar.get('/api/tasks')).body as { id: string }[]).some((x) => x.id === t.id)).toBe(false);
+    expect((await omar.get(`/api/tasks/${t.id}`)).status).toBe(404);
+    const seen = (await reem.get(`/api/tasks/${t.id}`)).body;
+    expect(seen.startDate > new Date().toISOString().slice(0, 10)).toBe(true);
+    const log = (await omar.get('/api/activity')).body as { taskId: string }[];
+    expect(log.some((e) => e.taskId === t.id)).toBe(false);
+  });
+
+  it("can't be ticked before they start", async () => {
+    const reem = await signIn('WDA-10377');
+    const t = await taskByTitle(title);
+    expect((await reem.post(`/api/tasks/${t.id}/steps/${t.steps[0].id}/toggle`).send({})).status).toBe(403);
+  });
+
+  it('are announced to assignees once the start date arrives', async () => {
+    const t = await taskByTitle(title);
+    const omar = await prisma.user.findUniqueOrThrow({ where: { empId: 'WDA-10482' } });
+    await prisma.task.update({ where: { id: t.id }, data: { startDate: new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z') } });
+    const agent = await signIn('WDA-10482');
+    const svc = app.get((await import('../src/tasks/tasks.service')).TasksService);
+    await svc.announceStarted();
+    expect((await agent.get(`/api/tasks/${t.id}`)).status).toBe(200);
+    expect(await prisma.notification.count({ where: { userId: omar.id, taskId: t.id, type: 'assigned' } })).toBe(1);
+    await svc.announceStarted();
+    expect(await prisma.notification.count({ where: { userId: omar.id, taskId: t.id, type: 'assigned' } })).toBe(1);
+  });
+
+  it('can be created by a head with a future start and no notification yet', async () => {
+    const reem = await signIn('WDA-10377');
+    const g = await prisma.group.findFirstOrThrow({ where: { nameEn: 'Platforms' } });
+    const sara = await prisma.user.findUniqueOrThrow({ where: { empId: 'WDA-10493' } });
+    const day = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+    const bad = await reem.post('/api/tasks').send({ groupId: g.id, title: 'x', desc: '', startDate: day(10), dueDate: day(5), assigneeIds: [sara.id], steps: [{ text: 'a' }] });
+    expect(bad.status).toBe(400);
+    const r = await reem.post('/api/tasks').send({ groupId: g.id, title: 'Rotate backups', desc: '', startDate: day(7), dueDate: day(12), assigneeIds: [sara.id], steps: [{ text: 'a' }] });
+    expect(r.status).toBe(201);
+    expect(await prisma.notification.count({ where: { taskId: r.body.id } })).toBe(0);
+  });
+});
+
+describe('attachments', () => {
+  it('lets an assignee upload, anyone in the department download, and blocks other departments', async () => {
+    const omar = await signIn('WDA-10482');
+    const lama = await signIn('WDA-10526');
+    const mona = await signIn('WDA-10611');
+    const t = await taskByTitle('Quarterly backup restore drill');
+    const up = await omar.post(`/api/tasks/${t.id}/attachments`).attach('file', Buffer.from('restore times'), { filename: 'تقرير.txt', contentType: 'text/plain' });
+    expect(up.status).toBe(201);
+    expect(up.body.name).toBe('تقرير.txt');
+    const list = await lama.get(`/api/tasks/${t.id}/attachments`);
+    expect(list.body).toHaveLength(1);
+    const dl = await lama.get(`/api/attachments/${up.body.id}`);
+    expect(dl.status).toBe(200);
+    expect(dl.headers['content-disposition']).toMatch(/^attachment/);
+    expect(dl.headers['content-type']).toBe('application/octet-stream');
+    expect((await mona.get(`/api/attachments/${up.body.id}`)).status).toBe(404);
+    // Lama isn't on the task: she can't add or delete files.
+    expect((await lama.post(`/api/tasks/${t.id}/attachments`).attach('file', Buffer.from('x'), 'x.txt')).status).toBe(403);
+    expect((await lama.delete(`/api/attachments/${up.body.id}`)).status).toBe(403);
+    expect((await omar.delete(`/api/attachments/${up.body.id}`)).status).toBe(200);
+  });
+
+  it('shows images inline and refuses files over the size limit', async () => {
+    const omar = await signIn('WDA-10482');
+    const t = await taskByTitle('Quarterly backup restore drill');
+    const png = await omar.post(`/api/tasks/${t.id}/attachments`).attach('file', Buffer.from([0x89, 0x50, 0x4e, 0x47]), { filename: 'a.png', contentType: 'image/png' });
+    expect((await omar.get(`/api/attachments/${png.body.id}`)).headers['content-disposition']).toMatch(/^inline/);
+    const big = await omar.post(`/api/tasks/${t.id}/attachments`).attach('file', Buffer.alloc(21 * 1024 * 1024), 'big.bin');
+    expect(big.status).toBe(413);
+  });
+});

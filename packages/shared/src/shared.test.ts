@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canManageTask, canTickSteps, canViewTask, canCreateTask, canVisit, daysTaken, dayDiff, progress, taskStatus } from './index';
+import { isScheduled, canAttach, canManageTask, canTickSteps, canViewTask, canCreateTask, canVisit, daysTaken, dayDiff, progress, taskStatus } from './index';
 
 const member = { id: 'm', role: 'member', deptId: 'it' } as const;
 const other = { id: 'o', role: 'member', deptId: 'it' } as const;
@@ -63,5 +63,27 @@ describe('task rights', () => {
     expect(canVisit('hr', 'employees')).toBe(true);
     expect(canVisit('admin', 'departments')).toBe(true);
     expect(canVisit('manager', 'departments')).toBe(false);
+  });
+});
+
+describe('scheduling', () => {
+  const later = { ...task, startDate: '2026-10-05' };
+  it('hides a scheduled task from members until its start date', () => {
+    expect(isScheduled(later, '2026-10-01')).toBe(true);
+    expect(canViewTask(member, later, '2026-10-01')).toBe(false);
+    expect(canViewTask(head, later, '2026-10-01')).toBe(true);
+    expect(canViewTask(member, later, '2026-10-05')).toBe(true);
+  });
+  it("doesn't allow ticking before the start date", () => {
+    expect(canTickSteps(head, later, '2026-10-01')).toBe(false);
+    expect(canTickSteps(member, later, '2026-10-05')).toBe(true);
+  });
+  it('shows a scheduled status', () => {
+    expect(taskStatus({ cancelledAt: null, completedAt: null, startDate: '2026-10-05', steps: [] }, '2026-10-01')).toBe('scheduled');
+  });
+  it('lets assignees and managers attach files', () => {
+    expect(canAttach(member, task)).toBe(true);
+    expect(canAttach(other, task)).toBe(false);
+    expect(canAttach(head, task)).toBe(true);
   });
 });

@@ -1,12 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnGatewayConnection, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
-import type { TaskDTO } from '@masar/shared';
+import { isScheduled, type TaskDTO } from '@masar/shared';
+import { orgToday } from '../common/today';
 import { SessionVerifier, readSessionCookie } from '../common/auth';
 import { config } from '../common/config';
 
 export const rooms = {
   dept: (id: string) => `dept:${id}`,
+  managers: (deptId: string) => `managers:${deptId}`,
   user: (id: string) => `user:${id}`,
   admins: 'admins',
   people: 'people', // HR and admins, who see every employee record
@@ -36,6 +38,7 @@ export class EventsGateway implements OnGatewayConnection {
     socket.data.user = user;
     const join = [rooms.all, rooms.user(user.id), rooms.dept(user.deptId)];
     if (user.role === 'admin') join.push(rooms.admins);
+    if (user.role === 'manager') join.push(rooms.managers(user.deptId));
     if (user.role === 'admin' || user.role === 'hr') join.push(rooms.people);
     await socket.join(join);
     this.log.debug(`${user.empId} connected`);
@@ -50,8 +53,17 @@ export class Events {
     return this.gw.server?.to(roomsList);
   }
 
-  /** A task changed. Sent to its department and to administrators. */
+  /**
+   * A task changed. Sent to its department and to administrators.
+   * A scheduled task goes only to the department's managers and administrators; everyone
+   * else in the department is told to drop it, in case they had it before it was rescheduled.
+   */
   task(task: TaskDTO) {
+    if (isScheduled(task, orgToday())) {
+      this.to([rooms.dept(task.deptId)])?.emit('task:deleted', { id: task.id, deptId: task.deptId });
+      this.to([rooms.managers(task.deptId), rooms.admins])?.emit('task:changed', task);
+      return;
+    }
     this.to([rooms.dept(task.deptId), rooms.admins])?.emit('task:changed', task);
   }
 

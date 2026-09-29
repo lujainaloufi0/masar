@@ -47,3 +47,16 @@ export const reducedMotion = () => typeof window !== 'undefined' && window.match
 
 /** Slow, visible fill: a longer distance takes longer, from 0.9 s up to 3 s. */
 export const fillMs = (d: number) => (reducedMotion() ? 150 : Math.min(3000, 900 + 2400 * Math.abs(d)));
+
+export function fmtSize(bytes: number, lang: Lang) {
+  const units = lang === 'ar' ? ['بايت', 'ك.ب', 'م.ب'] : ['B', 'KB', 'MB'];
+  let n = bytes, i = 0;
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024;
+    i++;
+  }
+  return `${i ? n.toFixed(n < 10 ? 1 : 0) : n} ${units[i]}`;
+}
+
+/** A task is live once its start date has arrived. */
+export const isLive = (t: { startDate?: string }) => !t.startDate || t.startDate <= todayISO();
