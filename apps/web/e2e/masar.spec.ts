@@ -66,3 +66,36 @@ test('wrong credentials show one plain message', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.locator('.form-err')).toContainText("don't match an active account");
 });
+
+test('a head attaches a file while creating a task', async ({ page }) => {
+  await demo(page, /Reem Al-Otaibi/);
+  await page.getByRole('button', { name: 'New task' }).first().click();
+  const form = page.getByRole('dialog');
+  await form.getByLabel('Title').fill('Review the network diagram');
+  await form.locator('label', { hasText: 'Sara Al-Dosari' }).click();
+  await form.getByLabel('Step 1', { exact: true }).fill('Check the diagram');
+  await form.locator('.dropzone input[type=file]').setInputFiles({ name: 'diagram.txt', mimeType: 'text/plain', buffer: Buffer.from('core switch → firewall') });
+  await expect(form.getByText('diagram.txt')).toBeVisible();
+  await form.getByRole('button', { name: 'Create task' }).click();
+  await expect(page.getByRole('status').getByText('Task created and assigned')).toBeVisible();
+  await page.getByRole('button', { name: /Review the network diagram/ }).first().click();
+  await expect(page.getByRole('dialog').getByText('diagram.txt')).toBeVisible();
+});
+
+test('a file can be attached to a single step', async ({ page }) => {
+  await demo(page, /Reem Al-Otaibi/);
+  await page.getByRole('button', { name: 'New task' }).first().click();
+  const form = page.getByRole('dialog');
+  await form.getByLabel('Title').fill('Update the floor plan');
+  await form.locator('label', { hasText: 'Omar Al-Shehri' }).click();
+  await form.getByLabel('Step 1', { exact: true }).fill('Measure the rooms');
+  await form.getByLabel('Step 2', { exact: true }).fill('Draw the plan');
+  const chooser = page.waitForEvent('filechooser');
+  await form.getByRole('button', { name: /Attach files to .Draw the plan/ }).click();
+  await (await chooser).setFiles({ name: 'sketch.txt', mimeType: 'text/plain', buffer: Buffer.from('rooms') });
+  await form.getByRole('button', { name: 'Create task' }).click();
+  await expect(page.getByRole('status').getByText('Task created and assigned')).toBeVisible();
+  await page.getByRole('button', { name: /Update the floor plan/ }).first().click();
+  const step = page.getByRole('dialog').locator('.step-wrap', { hasText: 'Draw the plan' });
+  await expect(step.getByText('sketch.txt')).toBeVisible();
+});

@@ -298,3 +298,16 @@ describe('attachments', () => {
     expect(big.status).toBe(413);
   });
 });
+
+describe('step files', () => {
+  it('attaches a file to one step, and rejects a step from another task', async () => {
+    const omar = await signIn('WDA-10482');
+    const t = await taskByTitle('Quarterly backup restore drill');
+    const other = await taskByTitle('Renew SSL certificates for public websites');
+    const ok = await omar.post(`/api/tasks/${t.id}/attachments`).field('stepId', t.steps[4].id).attach('file', Buffer.from('times'), 'times.txt');
+    expect(ok.status).toBe(201);
+    expect(ok.body.stepId).toBe(t.steps[4].id);
+    const bad = await omar.post(`/api/tasks/${t.id}/attachments`).field('stepId', other.steps[0].id).attach('file', Buffer.from('x'), 'x.txt');
+    expect(bad.status).toBe(400);
+  });
+});

@@ -547,3 +547,28 @@ video.fthumb{object-fit:contain;background:#000}
 @media (hover:none){.factions{opacity:1}}
 @media (max-width:560px){.drawer-tabs{padding-inline:16px}}
 }
+@layer components {
+.dropzone.compact{flex-direction:row;justify-content:center;gap:10px;padding:14px 12px}
+.staged{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:12px;overflow:hidden}
+.staged li{display:flex;align-items:center;gap:10px;padding:6px 6px 6px 12px;min-width:0}
+[dir="rtl"] .staged li{padding:6px 12px 6px 6px}
+.staged li+li{border-top:1px solid var(--line-2)}
+.staged .ico{color:var(--ink-3)}
+.staged .fname{flex:1;min-width:0}
+.staged .icon-btn{width:30px;height:30px}
+}
+@layer components {
+.steps>.step-wrap+.step-wrap{border-top:1px solid var(--line-2)}
+.step-row{display:flex;align-items:stretch;background:var(--surface)}
+.step-row .step{flex:1;min-width:0}
+.step-row .attach-btn{align-self:center;margin-inline-end:8px;color:var(--ink-3)}
+.step-row .attach-btn:hover{color:var(--accent)}
+.step-files{padding:0 14px 12px 48px}
+[dir="rtl"] .step-files{padding:0 48px 12px 14px}
+.files.small{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.files.small .fcard{flex-direction:row;align-items:center}
+.files.small .fthumb{width:44px;height:44px;aspect-ratio:auto;flex:none}
+.files.small figcaption{padding:6px 8px;min-width:0;flex:1}
+.files.small .factions{top:50%;transform:translateY(-50%)}
+.step-edit .staged{margin-inline-start:30px}
+}

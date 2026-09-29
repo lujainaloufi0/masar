@@ -146,6 +146,7 @@ model Step {
   doneAt   DateTime?
   doneById String?
   doneBy   User?     @relation(fields: [doneById], references: [id], onDelete: SetNull)
+  attachments Attachment[]
 
   @@index([taskId, position])
 }
@@ -189,6 +190,9 @@ model Attachment {
   id         String   @id @default(cuid())
   taskId     String
   task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  /// set when the file belongs to one step; if that step is removed the file stays on the task
+  stepId     String?
+  step       Step?    @relation(fields: [stepId], references: [id], onDelete: SetNull)
   uploaderId String?
   uploader   User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
   name       String

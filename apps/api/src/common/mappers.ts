@@ -88,6 +88,7 @@ export const PERSON_INCLUDE = { groups: { select: { groupId: true } } } satisfie
 export const toAttachment = (a: Omit<Attachment, 'data'>): AttachmentDTO => ({
   id: a.id,
   taskId: a.taskId,
+  stepId: a.stepId,
   uploaderId: a.uploaderId,
   name: a.name,
   mime: a.mime,

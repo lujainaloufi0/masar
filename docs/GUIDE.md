@@ -100,7 +100,7 @@ A task has a **start date** (`startDate`) as well as a due date. While the start
 The rule lives in `packages/shared` (`isScheduled`, `canViewTask`, `canTickSteps`), so the API and web app agree.
 
 ### Files on tasks
-Files are stored in the database (the `Attachment` table), so they work on hosts without a permanent disk. Limits: 20 MB a file, 50 files a task.
+Files are stored in the database (the `Attachment` table), so they work on hosts without a permanent disk. A file belongs to the task as a whole, or to one step (`stepId`). In the New task form, picked files wait in the browser and upload right after the task is saved; the saved steps come back in the same order they were sent, which is how each step's files find their step. If a step is later removed, its files stay on the task. Limits: 20 MB a file, 50 files a task.
 - Assignees and task managers can upload. Anyone who can see the task can view and download. The uploader or a task manager can delete.
 - Only safe types (common images, videos, audio and PDF) open inside the browser. Everything else is sent as a download with a strict security header, so an uploaded web page can never run as part of Masar.
 - Uploads pass through the web app's `proxy.ts`; `proxyClientMaxBodySize` in `next.config.ts` allows them through.

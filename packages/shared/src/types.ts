@@ -113,6 +113,8 @@ export interface TaskDTO {
 export interface AttachmentDTO {
   id: string;
   taskId: string;
+  /** the step it belongs to; null for files on the task as a whole */
+  stepId: string | null;
   uploaderId: string | null;
   name: string;
   mime: string;

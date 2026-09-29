@@ -2,12 +2,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import type { TaskDTO } from '@masar/shared';
-import { api, ApiError, errorKey } from '@/lib/api';
+import { api, ApiError, errorKey, uploadFile } from '@/lib/api';
 import { putTask, useLookup, useTask } from '@/lib/data';
 import { usePrefs } from '@/lib/prefs';
 import { localDay, todayISO } from '@/lib/format';
 import { Icon } from '../Icon';
 import { Avatar, FieldErr } from '../bits';
+import { AttachButton, DropZone, MAX_FILE_BYTES, StagedFiles } from './TaskFiles';
 import { useToast } from '../fx';
 import { useDrawer } from '../drawer-ctx';
 
@@ -16,6 +17,8 @@ interface StepRow {
   id: string | null;
   text: string;
   done: boolean;
+  /** files picked for this step, uploaded after saving */
+  files: File[];
 }
 
 const inAWeek = () => {
@@ -41,7 +44,7 @@ function Form({ task }: { task?: TaskDTO }) {
   const deptId = task?.deptId ?? me.deptId;
   const groups = [...L.groups.values()].filter((g) => g.deptId === deptId);
   const seq = useRef(0);
-  const row = (s: Partial<StepRow> = {}): StepRow => ({ key: ++seq.current, id: null, text: '', done: false, ...s });
+  const row = (s: Partial<StepRow> = {}): StepRow => ({ key: ++seq.current, id: null, text: '', done: false, files: [], ...s });
 
   const [title, setTitle] = useState(task ? tx(task.title) : '');
   const [desc, setDesc] = useState(task ? tx(task.desc) : '');
@@ -54,6 +57,17 @@ function Form({ task }: { task?: TaskDTO }) {
   );
   const [err, setErr] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // Files picked in the form (for the task, or for one step). They're uploaded right after the task is saved.
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const fit = (list: File[]) => {
+    const ok = list.filter((f) => f.size <= MAX_FILE_BYTES);
+    for (const f of list) if (f.size > MAX_FILE_BYTES) toast(t('errFileTooBigNamed', { name: f.name }), 'err');
+    return ok;
+  };
+  const addFiles = (list: File[]) => setFiles((cur) => [...cur, ...fit(list)].slice(0, 20));
+  const addStepFiles = (key: number, list: File[]) =>
+    setSteps((l) => l.map((x) => (x.key === key ? { ...x, files: [...x.files, ...fit(list)].slice(0, 10) } : x)));
   const form = useRef<HTMLFormElement>(null);
 
   const members = L.allPeople.filter(
@@ -89,6 +103,22 @@ function Form({ task }: { task?: TaskDTO }) {
     try {
       const r = task ? await api<TaskDTO>(`/tasks/${task.id}`, { method: 'PATCH', body }) : await api<TaskDTO>('/tasks', { body });
       putTask(qc, r);
+      // Steps come back in the order they were sent, so the i-th kept row is the i-th saved step.
+      const kept = steps.filter((x) => x.text.trim());
+      const queue: [File, string | undefined][] = [
+        ...files.map((f): [File, undefined] => [f, undefined]),
+        ...kept.flatMap((x, i) => x.files.map((f): [File, string | undefined] => [f, r.steps[i]?.id])),
+      ];
+      for (const [f, stepId] of queue) {
+        setUploading(f.name);
+        try {
+          await uploadFile(`/tasks/${r.id}/attachments`, f, stepId ? { stepId } : {});
+        } catch (e) {
+          toast(`${f.name}: ${t(errorKey(e))}`, 'err');
+        }
+      }
+      setUploading(null);
+      if (queue.length) qc.invalidateQueries({ queryKey: ['attachments', r.id] });
       if (task) {
         toast(t('toastSaved'));
         open({ type: 'task', id: r.id });
@@ -175,7 +205,8 @@ function Form({ task }: { task?: TaskDTO }) {
             <span className="lbl">{t('f_steps')}</span>
             <div className="step-edit">
               {steps.map((s, i) => (
-                <div className="row" key={s.key}>
+                <div key={s.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="row">
                   <span className="n">
                     {s.done ? <span style={{ color: 'var(--accent)' }} title={t('stepDoneMark')}><Icon name="check" className="sm" /></span> : i + 1}
                   </span>
@@ -187,11 +218,17 @@ function Form({ task }: { task?: TaskDTO }) {
                     aria-label={t('f_stepPh', { n: i + 1 })}
                     onChange={(e) => setSteps((l) => l.map((x) => (x.key === s.key ? { ...x, text: e.target.value } : x)))}
                   />
+                  <AttachButton label={t('attachToStep', { step: s.text || t('f_stepPh', { n: i + 1 }) })} onFiles={(fs) => addStepFiles(s.key, fs)} />
                   {steps.length > 1 && (
                     <button type="button" className="icon-btn" onClick={() => setSteps((l) => l.filter((x) => x.key !== s.key))} aria-label={t('removeStep', { n: i + 1 })}>
                       <Icon name="trash" className="sm" />
                     </button>
                   )}
+                </div>
+                <StagedFiles
+                  files={s.files}
+                  onRemove={(j) => setSteps((l) => l.map((x) => (x.key === s.key ? { ...x, files: x.files.filter((_, k) => k !== j) } : x)))}
+                />
                 </div>
               ))}
             </div>
@@ -212,12 +249,20 @@ function Form({ task }: { task?: TaskDTO }) {
             </button>
             {err.steps ? <FieldErr msg={msg('steps')} /> : <span className="hint">{t('f_stepsHint')}</span>}
           </div>
+          <div className="field">
+            <span className="lbl">
+              {t('f_files')} <span className="faint" style={{ fontWeight: 400 }}>({t('f_optional')})</span>
+            </span>
+            <DropZone compact onFiles={addFiles} />
+            <StagedFiles files={files} onRemove={(i) => setFiles((l) => l.filter((_, j) => j !== i))} />
+            <span className="hint">{t('f_filesHint')}</span>
+          </div>
         </div>
         <div className="drawer-f">
           <button type="button" className="btn btn-ghost" onClick={() => (task ? open({ type: 'task', id: task.id }) : close())}>{t('cancel')}</button>
           <button type="submit" className="btn btn-primary" disabled={saving}>
             <Icon name={task ? 'check' : 'plus'} />
-            {t(task ? 'saveChanges' : 'createTask')}
+            {uploading ? t('uploading', { name: uploading }) : t(task ? 'saveChanges' : 'createTask')}
           </button>
         </div>
       </form>

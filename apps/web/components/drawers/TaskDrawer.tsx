@@ -2,8 +2,8 @@
 import { animate } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { canManageTask, canTickSteps, daysTaken, isScheduled, progress, taskStatus, type TaskDTO } from '@masar/shared';
-import { FilesTab } from './FilesTab';
+import { canAttach, canManageTask, canTickSteps, daysTaken, isScheduled, progress, taskStatus, type TaskDTO } from '@masar/shared';
+import { AttachButton, DropZone, FileGrid, useTaskFiles, useUploader } from './TaskFiles';
 import { api, errorKey } from '@/lib/api';
 import { dropTask, keys, putTask, useLookup, useTask } from '@/lib/data';
 import { usePrefs } from '@/lib/prefs';
@@ -55,7 +55,26 @@ function TaskBody({ task }: { task: TaskDTO }) {
   const today = todayISO();
   const scheduled = isScheduled(task, today);
   const canTick = canTickSteps(me, task, today);
-  const [tab, setTab] = useState<'overview' | 'files'>('overview');
+  const { data: files } = useTaskFiles(task.id);
+  const { upload, uploading } = useUploader(task.id);
+  const mayAttach = canAttach(me, task);
+  const generalFiles = (files ?? []).filter((f) => !f.stepId || !task.steps.some((s) => s.id === f.stepId));
+  const filesOf = (stepId: string) => (files ?? []).filter((f) => f.stepId === stepId);
+  const canDeleteFile = (f: { uploaderId: string | null }) => f.uploaderId === me.id || canManageTask(me, task);
+  const addFiles = async (list: File[], stepId?: string) => {
+    const n = await upload(list, stepId);
+    qc.invalidateQueries({ queryKey: keys.attachments(task.id) });
+    if (n) toast(n === 1 ? t('fileAdded') : t('filesAdded', { n }));
+  };
+  const deleteFile = async (f: { id: string }) => {
+    try {
+      await api(`/attachments/${f.id}`, { method: 'DELETE' });
+      qc.invalidateQueries({ queryKey: keys.attachments(task.id) });
+      toast(t('fileDeleted'));
+    } catch (e) {
+      toast(t(errorKey(e)), 'err');
+    }
+  };
   const canManage = canManageTask(me, task);
   const dept = L.dept(task.deptId);
   const group = L.group(task.groupId);
@@ -184,21 +203,6 @@ function TaskBody({ task }: { task: TaskDTO }) {
         )}
         <button className="icon-btn" onClick={close} aria-label={t('close')}><Icon name="x" /></button>
       </div>
-      <div className="drawer-tabs">
-        <div className="seg" role="tablist" aria-label={tx(task.title)}>
-          <button role="tab" aria-selected={tab === 'overview'} aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}>
-            {t('tab_overview')}
-          </button>
-          <button role="tab" aria-selected={tab === 'files'} aria-pressed={tab === 'files'} onClick={() => setTab('files')}>
-            <Icon name="clip" className="sm" />
-            {t('tab_files')}
-            {task.attachmentCount > 0 && <span className="tab-count">{task.attachmentCount}</span>}
-          </button>
-        </div>
-      </div>
-      {tab === 'files' ? (
-        <FilesTab task={task} />
-      ) : (
       <div className="drawer-b">
         {scheduled && !task.cancelledAt && (
           <div className="banner info"><Icon name="hourglass" /><p>{t('scheduledBanner', { date: fmtLong(task.startDate, lang) })}</p></div>
@@ -271,18 +275,46 @@ function TaskBody({ task }: { task: TaskDTO }) {
                   </span>
                 </>
               );
-              return canTick ? (
-                <button key={s.id} type="button" className={`step can ${s.done ? 'on' : ''}`} role="checkbox" aria-checked={s.done} aria-busy={busy === s.id} onClick={() => toggle(s.id)}>
-                  {inner}
-                </button>
-              ) : (
-                <div key={s.id} className={`step ${s.done ? 'on' : ''}`}>{inner}</div>
+              const stepFiles = filesOf(s.id);
+              return (
+                <div key={s.id} className="step-wrap">
+                  <div className="step-row">
+                    {canTick ? (
+                      <button type="button" className={`step can ${s.done ? 'on' : ''}`} role="checkbox" aria-checked={s.done} aria-busy={busy === s.id} onClick={() => toggle(s.id)}>
+                        {inner}
+                      </button>
+                    ) : (
+                      <div className={`step ${s.done ? 'on' : ''}`}>{inner}</div>
+                    )}
+                    {mayAttach && <AttachButton label={t('attachToStep', { step: tx(s.text) })} onFiles={(fs) => addFiles(fs, s.id)} />}
+                  </div>
+                  {stepFiles.length > 0 && (
+                    <div className="step-files">
+                      <FileGrid files={stepFiles} small canDelete={canDeleteFile} onDelete={deleteFile} />
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
           {!canTick && !task.cancelledAt && !scheduled && (
             <p className="readonly-note"><Icon name="lock" className="sm" />{t('readOnly')}</p>
           )}
+        </div>
+
+        <div>
+          <div className="section-t">
+            {t('f_files')}
+            {generalFiles.length > 0 && <span>{generalFiles.length}</span>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {mayAttach && <DropZone compact onFiles={(fs) => addFiles(fs)} busy={uploading} />}
+            {generalFiles.length > 0 ? (
+              <FileGrid files={generalFiles} canDelete={canDeleteFile} onDelete={deleteFile} />
+            ) : (
+              !mayAttach && <p className="faint" style={{ fontSize: 13 }}>{t('noFiles')}</p>
+            )}
+          </div>
         </div>
 
         <div>
@@ -385,7 +417,6 @@ function TaskBody({ task }: { task: TaskDTO }) {
           </div>
         )}
       </div>
-      )}
     </>
   );
 }

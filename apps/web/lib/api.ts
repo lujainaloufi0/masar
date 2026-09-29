@@ -55,8 +55,9 @@ export function errorKey(e: unknown): string {
 }
 
 /** Uploads one file as multipart form data. */
-export async function uploadFile<T>(path: string, file: File): Promise<T> {
+export async function uploadFile<T>(path: string, file: File, fields: Record<string, string> = {}): Promise<T> {
   const body = new FormData();
+  for (const [k, v] of Object.entries(fields)) body.append(k, v);
   body.append('file', file);
   let res: Response;
   try {
